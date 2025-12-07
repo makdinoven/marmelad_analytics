@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сценарный анализ | СОАО «Коммунарка» — Мармелад</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f0f1a;
+            --bg-card: #1a1a2e;
+            --bg-input: #252540;
+            --accent-blue: #4361ee;
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --accent-yellow: #f1c40f;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --border-color: #3a3a5a;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Scroll offset for sticky nav */
+        [id] {
+            scroll-margin-top: 70px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            background: linear-gradient(135deg, var(--bg-card) 0%, #16213e 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.3rem;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Sticky Navigation */
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 15, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.6rem 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .sticky-nav .container {
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .nav-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav-toggle:hover {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.3rem;
+            overflow-x: auto;
+            padding: 0.25rem 0;
+        }
+
+        .nav-links::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .nav-links::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .nav-link {
+            padding: 0.5rem 0.8rem;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        .nav-link.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        /* Horizontal Collapsible Parameters Panel */
+        .params-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .params-panel.collapsed {
+            max-height: 0;
+            border: none;
+            margin-bottom: 0;
+        }
+
+        .params-panel .card {
+            margin-bottom: 0;
+            border: none;
+            border-radius: 0;
+        }
+
+        .params-panel .form-section {
+            display: inline-block;
+            vertical-align: top;
+            width: auto;
+            min-width: 200px;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .params-panel .form-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .params-panel .form-group {
+            min-width: 120px;
+            flex: 0 0 auto;
+        }
+
+        .params-panel .form-group.full-width {
+            flex: 0 0 auto;
+            width: auto;
+        }
+
+        .params-panel .card-title {
+            display: none;
+        }
+
+        .params-inner {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 1rem;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .params-inner .btn-primary {
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        /* Tooltip styles */
+        .tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            background: var(--border-color);
+            border-radius: 50%;
+            font-size: 10px;
+            color: var(--text-secondary);
+            cursor: help;
+            margin-left: 4px;
+            position: relative;
+            vertical-align: middle;
+        }
+
+        .tooltip-icon:hover {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .tooltip-icon .tooltip-text {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a2e;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 400;
+            white-space: normal;
+            width: 250px;
+            text-align: left;
+            z-index: 1000;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: opacity 0.2s, visibility 0.2s;
+            line-height: 1.4;
+        }
+
+        .tooltip-icon .tooltip-text::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: var(--border-color) transparent transparent transparent;
+        }
+
+        .tooltip-icon:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Image modal for fullscreen */
+        .chart-img {
+            cursor: zoom-in;
+            transition: transform 0.2s;
+            max-height: 280px;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .chart-img:hover {
+            transform: scale(1.02);
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .image-modal img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .image-modal .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+            z-index: 2001;
+        }
+
+        .image-modal .close-modal:hover {
+            color: var(--accent-red);
+        }
+
+        /* Info box for explanations */
+        .info-box {
+            background: rgba(67, 97, 238, 0.1);
+            border-left: 3px solid var(--accent-blue);
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .info-box strong {
+            color: var(--text-primary);
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-icon {
+            font-size: 1rem;
+        }
+
+        /* Smaller charts grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 0.5rem;
+            text-align: center;
+        }
+
+        .chart-container.full-width {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 900px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title .icon {
+            font-size: 1.4rem;
+        }
+
+        /* Form Styles */
+        .sidebar {
+            position: sticky;
+            top: 1rem;
+            height: calc(100vh - 2rem);
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 0.5rem;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--bg-card);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 0.75rem;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.9rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #7c3aed);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+        }
+
+        /* Results */
+        .results-area {
+            min-width: 0;
+        }
+
+        /* Recommendation Card */
+        .recommendation {
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .recommendation.success {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(46, 204, 113, 0.05));
+            border: 1px solid var(--accent-green);
+        }
+
+        .recommendation.warning {
+            background: linear-gradient(135deg, rgba(241, 196, 15, 0.15), rgba(241, 196, 15, 0.05));
+            border: 1px solid var(--accent-yellow);
+        }
+
+        .recommendation.danger {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(231, 76, 60, 0.05));
+            border: 1px solid var(--accent-red);
+        }
+
+        .recommendation-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .recommendation-status {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .recommendation.success .recommendation-status { color: var(--accent-green); }
+        .recommendation.warning .recommendation-status { color: var(--accent-yellow); }
+        .recommendation.danger .recommendation-status { color: var(--accent-red); }
+
+        .recommendation-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .recommendation-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .recommendation-item .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+
+        .recommendation-item .value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .value.positive { color: var(--accent-green); }
+        .value.negative { color: var(--accent-red); }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-input);
+            font-weight: 600;
+            color: var(--accent-blue);
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        td {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .scenario-base { border-left: 3px solid var(--accent-blue); }
+        .scenario-opt { border-left: 3px solid var(--accent-green); }
+        .scenario-pess { border-left: 3px solid var(--accent-red); }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-container img {
+            width: 100%;
+            max-width: 1000px;
+            height: auto;
+            border-radius: 8px;
+            margin: 0 auto;
+            display: block;
+        }
+
+        .chart-container.large img {
+            max-width: 100%;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab {
+            padding: 0.6rem 1.2rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            background: var(--bg-input);
+        }
+
+        .tab.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 3rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Сценарный анализ рынка мармелада</h1>
+            <p>СОАО «Коммунарка» — Оценка выхода на рынок в условиях конкуренции с ОАО «Красный пищевик»</p>
+        </div>
+    </header>
+
+    <!-- Sticky Navigation -->
+    <nav class="sticky-nav">
+        <div class="container">
+            <button class="nav-toggle" onclick="toggleSidebar()" id="sidebarToggle">
+                <span id="toggleIcon">▲</span> Скрыть параметры
+            </button>
+            <div class="nav-links">
+                <a href="#recommendation" class="nav-link">Рекомендация</a>
+                <a href="#scenarios" class="nav-link">Сценарии</a>
+                <a href="#optimization" class="nav-link">Оптимизация</a>
+                <a href="#monte-carlo" class="nav-link">Монте-Карло</a>
+                <a href="#charts" class="nav-link">Графики</a>
+                <a href="#break-even" class="nav-link">Безубыточность</a>
+                <a href="#sensitivity" class="nav-link">Чувствительность</a>
+                <a href="#dynamics" class="nav-link">Динамика</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Image Modal for fullscreen view -->
+    <div class="image-modal" id="imageModal" onclick="closeImageModal()">
+        <span class="close-modal">&times;</span>
+        <img id="modalImage" src="" alt="Fullscreen chart">
+    </div>
+
+    <div class="container">
+        <!-- Horizontal Parameters Panel -->
+        <div class="params-panel" id="paramsPanel">
+            <form method="POST" class="card">
+                <div class="params-inner">
+                    <div class="form-section">
+                        <div class="form-section-title">Конкурент</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Мощность (т/год)</label>
+                                <input type="number" name="competitor_capacity" value="{{ params.competitor_capacity }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Выпуск 2024 (т)</label>
+                                <input type="number" name="competitor_output" value="{{ params.competitor_output }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Коммунарка</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Мощность (т/год)</label>
+                                <input type="number" name="capacity_new_line" value="{{ params.capacity_new_line }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Цена (₽/т)</label>
+                                <input type="number" name="price_new" value="{{ params.price_new }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Перем. затр. (₽/т)</label>
+                                <input type="number" name="var_cost_new" value="{{ params.var_cost_new }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Пост. затр. (₽/год)</label>
+                                <input type="number" name="fixed_costs" value="{{ params.fixed_costs }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Спрос (тонн)</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>🔵 Базовый</label>
+                                <input type="number" name="demand_base" value="{{ params.demand_base }}">
+                            </div>
+                            <div class="form-group">
+                                <label>🟢 Оптимист.</label>
+                                <input type="number" name="demand_opt" value="{{ params.demand_opt }}">
+                            </div>
+                            <div class="form-group">
+                                <label>🔴 Пессимист.</label>
+                                <input type="number" name="demand_pess" value="{{ params.demand_pess }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Корр. цены (×)</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Базовый</label>
+                                <input type="number" step="0.01" name="price_adj_base" value="{{ params.price_adj_base }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Оптимист.</label>
+                                <input type="number" step="0.01" name="price_adj_opt" value="{{ params.price_adj_opt }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Пессимист.</label>
+                                <input type="number" step="0.01" name="price_adj_pess" value="{{ params.price_adj_pess }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Корр. затрат (×)</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Базовый</label>
+                                <input type="number" step="0.01" name="cost_adj_base" value="{{ params.cost_adj_base }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Оптимист.</label>
+                                <input type="number" step="0.01" name="cost_adj_opt" value="{{ params.cost_adj_opt }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Пессимист.</label>
+                                <input type="number" step="0.01" name="cost_adj_pess" value="{{ params.cost_adj_pess }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Монте-Карло</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Вариация</label>
+                                <input type="number" step="0.01" name="mc_variation" value="{{ params.mc_variation }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Прогонов</label>
+                                <input type="number" name="mc_simulations" value="{{ params.mc_simulations }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Динамика</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Лет</label>
+                                <input type="number" name="horizon_years" value="{{ params.horizon_years }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Инвестиции (₽)</label>
+                                <input type="number" name="initial_investment" value="{{ params.initial_investment }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Рост спроса</label>
+                                <input type="number" step="0.01" name="demand_growth_rate" value="{{ params.demand_growth_rate }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Инфляция</label>
+                                <input type="number" step="0.01" name="inflation_rate" value="{{ params.inflation_rate }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Рост цены</label>
+                                <input type="number" step="0.01" name="price_growth_rate" value="{{ params.price_growth_rate }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <span>🔄</span> Пересчитать
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Area -->
+        <main class="results-area">
+                <!-- Recommendation -->
+                <div id="recommendation" class="recommendation {{ recommendation.status }}">
+                    <div class="recommendation-header">
+                        <span class="recommendation-status">
+                            {% if recommendation.status == 'success' %}✅{% elif recommendation.status == 'warning' %}⚠️{% else %}❌{% endif %}
+                            Запуск линии: {{ recommendation.recommendation }}
+                        </span>
+                    </div>
+                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                        Базовый сценарий показывает {{ recommendation.reason }}.
+                    </p>
+                    <div class="recommendation-details">
+                        <div class="recommendation-item">
+                            <div class="label">Прибыль (базовый)
+                                <span class="tooltip-icon">?<span class="tooltip-text">Чистая прибыль при базовом сценарии спроса после вычета всех затрат</span></span>
+                            </div>
+                            <div class="value {{ 'positive' if recommendation.base_profit > 0 else 'negative' }}">
+                                {{ "%.2f"|format(recommendation.base_profit / 1000000) }} млн ₽
+                            </div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Прибыль (оптимист.)
+                                <span class="tooltip-icon">?<span class="tooltip-text">Прибыль при высоком спросе, росте цен и снижении затрат</span></span>
+                            </div>
+                            <div class="value positive">
+                                {{ "%.2f"|format(recommendation.opt_profit / 1000000) }} млн ₽
+                            </div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Прибыль (пессимист.)
+                                <span class="tooltip-icon">?<span class="tooltip-text">Прибыль при низком спросе, падении цен и росте затрат</span></span>
+                            </div>
+                            <div class="value {{ 'positive' if recommendation.pess_profit > 0 else 'negative' }}">
+                                {{ "%.2f"|format(recommendation.pess_profit / 1000000) }} млн ₽
+                            </div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Риск убытка
+                                <span class="tooltip-icon">?<span class="tooltip-text">Вероятность получить убыток по результатам Монте-Карло симуляции ({{ params.mc_simulations }} прогонов)</span></span>
+                            </div>
+                            <div class="value {{ 'positive' if recommendation.prob_loss_base < 10 else 'negative' }}">
+                                {{ "%.1f"|format(recommendation.prob_loss_base) }}%
+                            </div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Маржинальность
+                                <span class="tooltip-icon">?<span class="tooltip-text">Доля прибыли в выручке: (Цена - Перем.затраты) / Цена × 100%</span></span>
+                            </div>
+                            <div class="value positive">{{ "%.0f"|format(recommendation.margin) }}%</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Загрузка линии
+                                <span class="tooltip-icon">?<span class="tooltip-text">Отношение объёма выпуска к максимальной мощности линии ({{ params.capacity_new_line }} т/год)</span></span>
+                            </div>
+                            <div class="value">{{ "%.0f"|format(recommendation.optimal_load) }}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Results Table -->
+                <div id="scenarios" class="card">
+                    <h3 class="card-title"><span class="icon">📊</span> Ключевые показатели по сценариям</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    {% for col in df_columns %}
+                                    <th>{{ col }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in df %}
+                                <tr class="{% if row['Сценарий'] == 'Базовый' %}scenario-base{% elif row['Сценарий'] == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                    {% for col in df_columns %}
+                                    <td>{{ row[col] }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Optimization Results -->
+                <div id="optimization" class="card">
+                    <h3 class="card-title"><span class="icon">🎯</span> Результаты оптимизации (PuLP)</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Сценарий</th>
+                                    <th>Статус</th>
+                                    <th>Оптим. объём (т)</th>
+                                    <th>Макс. прибыль</th>
+                                    <th>Загрузка линии</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for opt in opt_results %}
+                                <tr class="{% if opt.scenario == 'Базовый' %}scenario-base{% elif opt.scenario == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                    <td>{{ opt.scenario }}</td>
+                                    <td>{{ opt.status }}</td>
+                                    <td>{{ "%.0f"|format(opt.optimal_volume) }}</td>
+                                    <td>{{ "%.2f"|format(opt.optimal_profit / 1000000) }} млн ₽</td>
+                                    <td>{{ "%.1f"|format(opt.utilization) }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Monte Carlo Stats -->
+                <div id="monte-carlo" class="card">
+                    <h3 class="card-title"><span class="icon">🎲</span> Статистика Монте-Карло ({{ params.mc_simulations }} прогонов)</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Сценарий</th>
+                                    <th>Средняя прибыль</th>
+                                    <th>Стд. откл.</th>
+                                    <th>Минимум</th>
+                                    <th>Максимум</th>
+                                    <th>5% перцентиль</th>
+                                    <th>95% перцентиль</th>
+                                    <th>P(убыток)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in mc_stats %}
+                                <tr class="{% if stat.scenario == 'Базовый' %}scenario-base{% elif stat.scenario == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                    <td>{{ stat.scenario }}</td>
+                                    <td>{{ stat.mean }}</td>
+                                    <td>{{ stat.std }}</td>
+                                    <td>{{ stat.min }}</td>
+                                    <td>{{ stat.max }}</td>
+                                    <td>{{ stat.p5 }}</td>
+                                    <td>{{ stat.p95 }}</td>
+                                    <td>{{ stat.prob_loss }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <h2 id="charts" class="section-title">📈 Визуализация результатов</h2>
+                
+                <div class="info-box">
+                    <strong>💡 Подсказка:</strong> Нажмите на любой график, чтобы открыть его в полноэкранном режиме.
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <div class="chart-title">Сравнение выручки, затрат и прибыли</div>
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_comparison }}" alt="Сравнение сценариев" onclick="openImageModal(this)">
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Распределение долей рынка</div>
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_market_share }}" alt="Доли рынка" onclick="openImageModal(this)">
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3 class="card-title"><span class="icon">🎲</span> Распределение прибыли (Монте-Карло)
+                        <span class="tooltip-icon">?<span class="tooltip-text">Гистограмма показывает распределение возможных значений прибыли из {{ params.mc_simulations }} симуляций. Красная зона — убыток, зелёная — прибыль.</span></span>
+                    </h3>
+                    
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('mc-base', this)">Базовый</button>
+                        <button class="tab" onclick="showTab('mc-opt', this)">Оптимистичный</button>
+                        <button class="tab" onclick="showTab('mc-pess', this)">Пессимистичный</button>
+                        <button class="tab" onclick="showTab('mc-compare', this)">Сравнение</button>
+                    </div>
+
+                    <div id="mc-base" class="tab-content active">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_base }}" alt="Монте-Карло: Базовый" onclick="openImageModal(this)" style="max-height: 350px;">
+                    </div>
+                    <div id="mc-opt" class="tab-content">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_opt }}" alt="Монте-Карло: Оптимистичный" onclick="openImageModal(this)" style="max-height: 350px;">
+                    </div>
+                    <div id="mc-pess" class="tab-content">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_pess }}" alt="Монте-Карло: Пессимистичный" onclick="openImageModal(this)" style="max-height: 350px;">
+                    </div>
+                    <div id="mc-compare" class="tab-content">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_comparison }}" alt="Сравнение Монте-Карло" onclick="openImageModal(this)" style="max-height: 350px;">
+                    </div>
+                </div>
+
+                <!-- Break-Even Analysis -->
+                <h2 id="break-even" class="section-title">📍 Точка безубыточности</h2>
+                
+                <div class="info-box">
+                    <strong>Что это?</strong> Точка безубыточности (ТБ) — минимальный объём продаж, при котором выручка покрывает все затраты. Ниже ТБ — убыток, выше — прибыль.
+                </div>
+                
+                <div class="card">
+                    <div class="recommendation-details" style="margin-bottom: 1.5rem;">
+                        <div class="recommendation-item">
+                            <div class="label">Точка безубыточности
+                                <span class="tooltip-icon">?<span class="tooltip-text">Объём продаж, при котором прибыль = 0. Формула: Постоянные затраты / (Цена - Переменные затраты)</span></span>
+                            </div>
+                            <div class="value">{{ "%.0f"|format(break_even.break_even_volume) }} т</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Выручка в ТБ
+                                <span class="tooltip-icon">?<span class="tooltip-text">Объём выручки, необходимый для покрытия всех затрат</span></span>
+                            </div>
+                            <div class="value">{{ "%.2f"|format(break_even.break_even_revenue / 1000000) }} млн ₽</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Маржа на тонну
+                                <span class="tooltip-icon">?<span class="tooltip-text">Вклад каждой тонны в покрытие постоянных затрат: Цена - Переменные затраты</span></span>
+                            </div>
+                            <div class="value positive">{{ "%.0f"|format(break_even.margin_per_unit) }} ₽</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Запас прочности
+                                <span class="tooltip-icon">?<span class="tooltip-text">Насколько текущие продажи превышают ТБ: (Объём - ТБ) / Объём × 100%. Чем выше — тем безопаснее.</span></span>
+                            </div>
+                            <div class="value {{ 'positive' if break_even.safety_margin > 20 else 'negative' }}">{{ "%.1f"|format(break_even.safety_margin) }}%</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Коэфф. покрытия
+                                <span class="tooltip-icon">?<span class="tooltip-text">Доля маржи в цене: (Цена - Перем.затраты) / Цена × 100%</span></span>
+                            </div>
+                            <div class="value">{{ "%.1f"|format(break_even.coverage_ratio) }}%</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Базовый объём</div>
+                            <div class="value">{{ "%.0f"|format(break_even.base_volume) }} т</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_break_even }}" alt="Точка безубыточности" onclick="openImageModal(this)">
+                    </div>
+                </div>
+
+                <!-- Sensitivity Analysis -->
+                <h2 id="sensitivity" class="section-title">🎯 Анализ чувствительности</h2>
+                
+                <div class="info-box">
+                    <strong>Что это?</strong> Анализ показывает, как изменение каждого параметра на ±{{ "%.0f"|format(sensitivity.variation * 100) }}% влияет на прибыль. 
+                    Параметры отсортированы по силе влияния — <strong>цена</strong> обычно самый важный фактор.
+                </div>
+                
+                <div class="card">
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                        Базовая прибыль: <strong>{{ "%.2f"|format(sensitivity.base_profit / 1000000) }} млн ₽</strong>
+                        <span class="tooltip-icon">?<span class="tooltip-text">Торнадо-диаграмма показывает, какие факторы больше всего влияют на прибыль. Длинные полосы = высокое влияние.</span></span>
+                    </p>
+                    <div class="table-wrapper" style="margin-bottom: 1.5rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Параметр</th>
+                                    <th>При снижении на {{ "%.0f"|format(sensitivity.variation * 100) }}%</th>
+                                    <th>При увеличении на {{ "%.0f"|format(sensitivity.variation * 100) }}%</th>
+                                    <th>Размах влияния</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for factor in sensitivity.factors %}
+                                <tr>
+                                    <td><strong>{{ factor.parameter }}</strong></td>
+                                    <td class="{{ 'negative' if factor.profit_low < 0 else '' }}">{{ "%.2f"|format(factor.profit_low / 1000000) }} млн ₽</td>
+                                    <td class="positive">{{ "%.2f"|format(factor.profit_high / 1000000) }} млн ₽</td>
+                                    <td><span class="value">± {{ "%.2f"|format(factor.impact / 2000000) }} млн ₽</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="chart-container">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_tornado }}" alt="Торнадо-диаграмма" onclick="openImageModal(this)">
+                    </div>
+                </div>
+
+                <!-- Yearly Dynamics -->
+                <h2 id="dynamics" class="section-title">📅 Динамика по годам ({{ params.horizon_years }} лет)</h2>
+                
+                <div class="info-box">
+                    <strong>Моделирование учитывает:</strong> рост спроса {{ "%.0f"|format(params.demand_growth_rate * 100) }}%/год, инфляцию {{ "%.1f"|format(params.inflation_rate * 100) }}%/год, 
+                    а также случайные факторы: волатильность спроса, экономические циклы, конкурентное давление и непредвиденные расходы.
+                </div>
+                
+                <div class="card">
+                    <div class="recommendation-details" style="margin-bottom: 1.5rem;">
+                        <div class="recommendation-item">
+                            <div class="label">Инвестиции
+                                <span class="tooltip-icon">?<span class="tooltip-text">Начальные вложения в производственную линию, оборудование и запуск</span></span>
+                            </div>
+                            <div class="value negative">{{ "%.1f"|format(dynamics.initial_investment / 1000000) }} млн ₽</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Суммарная прибыль
+                                <span class="tooltip-icon">?<span class="tooltip-text">Сумма чистой прибыли за все {{ params.horizon_years }} лет (без дисконтирования)</span></span>
+                            </div>
+                            <div class="value positive">{{ "%.2f"|format(dynamics.total_profit / 1000000) }} млн ₽</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">NPV
+                                <span class="tooltip-icon">?<span class="tooltip-text">Net Present Value — чистая приведённая стоимость. Учитывает стоимость денег во времени со ставкой {{ "%.1f"|format(dynamics.discount_rate * 100) }}% (инфляция + премия за риск 5%)</span></span>
+                            </div>
+                            <div class="value {{ 'positive' if dynamics.npv > 0 else 'negative' }}">{{ "%.2f"|format(dynamics.npv / 1000000) }} млн ₽</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Срок окупаемости
+                                <span class="tooltip-icon">?<span class="tooltip-text">Количество лет, за которое накопленный денежный поток станет положительным</span></span>
+                            </div>
+                            <div class="value {{ 'positive' if dynamics.payback_year and dynamics.payback_year <= 3 else '' }}">
+                                {% if dynamics.payback_year %}{{ dynamics.payback_year }} лет{% else %}> {{ params.horizon_years }} лет{% endif %}
+                            </div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">ROI (простой)
+                                <span class="tooltip-icon">?<span class="tooltip-text">Return on Investment — отношение суммарной прибыли к инвестициям × 100%</span></span>
+                            </div>
+                            <div class="value {{ 'positive' if dynamics.simple_roi > 0 else 'negative' }}">{{ "%.1f"|format(dynamics.simple_roi) }}%</div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="label">Среднегодовой ROI
+                                <span class="tooltip-icon">?<span class="tooltip-text">ROI делённый на количество лет — среднегодовая доходность проекта</span></span>
+                            </div>
+                            <div class="value">{{ "%.1f"|format(dynamics.avg_annual_roi) }}%</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Legend for charts -->
+                    <div style="margin: 1rem 0; padding: 0.75rem; background: var(--bg-input); border-radius: 8px;">
+                        <strong style="font-size: 0.85rem;">Условные обозначения на графиках:</strong>
+                        <div style="margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 1rem;">
+                            <span class="legend-item"><span class="legend-icon">⚠️</span> Год с непредвиденными расходами (ремонт, штрафы, форс-мажор)</span>
+                            <span class="legend-item"><span class="legend-icon" style="color: #2ecc71;">●</span> Зона прибыли</span>
+                            <span class="legend-item"><span class="legend-icon" style="color: #e74c3c;">●</span> Зона убытка</span>
+                            <span class="legend-item"><span class="legend-icon" style="color: orange;">▲</span> Фактор рыночного спроса (>1 = рост, <1 = падение)</span>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 1rem 0 0.5rem; color: var(--text-secondary);">Прогноз по годам</h4>
+                    <div class="table-wrapper" style="margin-bottom: 1.5rem;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Год</th>
+                                    <th>Объём (т)</th>
+                                    <th>Цена (₽/т)</th>
+                                    <th>Выручка</th>
+                                    <th>Затраты</th>
+                                    <th>Прибыль</th>
+                                    <th>Накопленный CF</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for year_data in dynamics.yearly_data %}
+                                <tr>
+                                    <td><strong>{{ year_data.year }}</strong></td>
+                                    <td>{{ "%.0f"|format(year_data.volume) }}</td>
+                                    <td>{{ "%.0f"|format(year_data.price) }}</td>
+                                    <td>{{ "%.2f"|format(year_data.revenue / 1000000) }} млн</td>
+                                    <td>{{ "%.2f"|format((year_data.total_var_costs + year_data.fixed_costs) / 1000000) }} млн</td>
+                                    <td class="{{ 'positive' if year_data.net_profit > 0 else 'negative' }}">{{ "%.2f"|format(year_data.net_profit / 1000000) }} млн</td>
+                                    <td class="{{ 'positive' if year_data.cumulative_cashflow > 0 else 'negative' }}">{{ "%.2f"|format(year_data.cumulative_cashflow / 1000000) }} млн</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="chart-container full-width">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_dynamics }}" alt="Динамика по годам" onclick="openImageModal(this)" style="max-height: 400px;">
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <footer>
+        <p>Сценарный анализ выхода СОАО «Коммунарка» на рынок мармелада</p>
+        <p>Python + Flask + Jinja2 | pandas, numpy, matplotlib, PuLP</p>
+    </footer>
+
+    <script>
+        // Tab switching for Monte-Carlo
+        function showTab(tabId, button) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            button.classList.add('active');
+        }
+
+        // Toggle parameters panel
+        function toggleSidebar() {
+            const paramsPanel = document.getElementById('paramsPanel');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            
+            paramsPanel.classList.toggle('collapsed');
+            
+            if (paramsPanel.classList.contains('collapsed')) {
+                toggleBtn.innerHTML = '<span id="toggleIcon">▼</span> Показать параметры';
+            } else {
+                toggleBtn.innerHTML = '<span id="toggleIcon">▲</span> Скрыть параметры';
+            }
+            
+            // Save preference
+            localStorage.setItem('paramsCollapsed', paramsPanel.classList.contains('collapsed'));
+        }
+
+        // Restore params panel state
+        document.addEventListener('DOMContentLoaded', function() {
+            const paramsCollapsed = localStorage.getItem('paramsCollapsed') === 'true';
+            const paramsPanel = document.getElementById('paramsPanel');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            
+            if (paramsCollapsed && paramsPanel) {
+                paramsPanel.classList.add('collapsed');
+                toggleBtn.innerHTML = '<span id="toggleIcon">▼</span> Показать параметры';
+            } else if (toggleBtn) {
+                toggleBtn.innerHTML = '<span id="toggleIcon">▲</span> Скрыть параметры';
+            }
+        });
+
+        // Image Modal for fullscreen view
+        function openImageModal(imgElement) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.classList.add('active');
+            modalImg.src = imgElement.src;
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
+
+        // Highlight active nav link on scroll
+        const sections = document.querySelectorAll('[id]');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function highlightNav() {
+            let current = '';
+            const scrollPos = window.scrollY + 100;
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', highlightNav);
+        highlightNav();
+
+        // Smooth scroll for nav links
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const target = document.getElementById(targetId);
+                if (target) {
+                    const navHeight = document.querySelector('.sticky-nav').offsetHeight;
+                    const targetPosition = target.offsetTop - navHeight - 10;
+                    window.scrollTo({
+                        top: targetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
