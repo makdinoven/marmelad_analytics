@@ -791,15 +791,15 @@
                                 <input type="number" name="capacity_new_line" value="{{ params.capacity_new_line }}">
                             </div>
                             <div class="form-group">
-                                <label>Цена (₽/т)</label>
+                                <label>Цена (BYN/т)</label>
                                 <input type="number" name="price_new" value="{{ params.price_new }}">
                             </div>
                             <div class="form-group">
-                                <label>Перем. затр. (₽/т)</label>
+                                <label>Перем. затр. (BYN/т)</label>
                                 <input type="number" name="var_cost_new" value="{{ params.var_cost_new }}">
                             </div>
                             <div class="form-group">
-                                <label>Пост. затр. (₽/год)</label>
+                                <label>Пост. затр. (BYN/год)</label>
                                 <input type="number" name="fixed_costs" value="{{ params.fixed_costs }}">
                             </div>
                         </div>
@@ -881,7 +881,7 @@
                                 <input type="number" name="horizon_years" value="{{ params.horizon_years }}">
                             </div>
                             <div class="form-group">
-                                <label>Инвестиции (₽)</label>
+                                <label>Инвестиции (BYN)</label>
                                 <input type="number" name="initial_investment" value="{{ params.initial_investment }}">
                             </div>
                             <div class="form-group">
@@ -925,7 +925,7 @@
                                 <span class="tooltip-icon">?<span class="tooltip-text">Чистая прибыль при базовом сценарии спроса после вычета всех затрат</span></span>
                             </div>
                             <div class="value {{ 'positive' if recommendation.base_profit > 0 else 'negative' }}">
-                                {{ "%.2f"|format(recommendation.base_profit / 1000000) }} млн ₽
+                                {{ "%.2f"|format(recommendation.base_profit / 1000000) }} млн BYN
                             </div>
                         </div>
                         <div class="recommendation-item">
@@ -933,7 +933,7 @@
                                 <span class="tooltip-icon">?<span class="tooltip-text">Прибыль при высоком спросе, росте цен и снижении затрат</span></span>
                             </div>
                             <div class="value positive">
-                                {{ "%.2f"|format(recommendation.opt_profit / 1000000) }} млн ₽
+                                {{ "%.2f"|format(recommendation.opt_profit / 1000000) }} млн BYN
                             </div>
                         </div>
                         <div class="recommendation-item">
@@ -941,7 +941,7 @@
                                 <span class="tooltip-icon">?<span class="tooltip-text">Прибыль при низком спросе, падении цен и росте затрат</span></span>
                             </div>
                             <div class="value {{ 'positive' if recommendation.pess_profit > 0 else 'negative' }}">
-                                {{ "%.2f"|format(recommendation.pess_profit / 1000000) }} млн ₽
+                                {{ "%.2f"|format(recommendation.pess_profit / 1000000) }} млн BYN
                             </div>
                         </div>
                         <div class="recommendation-item">
@@ -1012,7 +1012,7 @@
                                     <td>{{ opt.scenario }}</td>
                                     <td>{{ opt.status }}</td>
                                     <td>{{ "%.0f"|format(opt.optimal_volume) }}</td>
-                                    <td>{{ "%.2f"|format(opt.optimal_profit / 1000000) }} млн ₽</td>
+                                    <td>{{ "%.2f"|format(opt.optimal_profit / 1000000) }} млн BYN</td>
                                     <td>{{ "%.1f"|format(opt.utilization) }}%</td>
                                 </tr>
                                 {% endfor %}
@@ -1119,13 +1119,13 @@
                             <div class="label">Выручка в ТБ
                                 <span class="tooltip-icon">?<span class="tooltip-text">Объём выручки, необходимый для покрытия всех затрат</span></span>
                             </div>
-                            <div class="value">{{ "%.2f"|format(break_even.break_even_revenue / 1000000) }} млн ₽</div>
+                            <div class="value">{{ "%.2f"|format(break_even.break_even_revenue / 1000000) }} млн BYN</div>
                         </div>
                         <div class="recommendation-item">
                             <div class="label">Маржа на тонну
                                 <span class="tooltip-icon">?<span class="tooltip-text">Вклад каждой тонны в покрытие постоянных затрат: Цена - Переменные затраты</span></span>
                             </div>
-                            <div class="value positive">{{ "%.0f"|format(break_even.margin_per_unit) }} ₽</div>
+                            <div class="value positive">{{ "%.0f"|format(break_even.margin_per_unit) }} BYN</div>
                         </div>
                         <div class="recommendation-item">
                             <div class="label">Запас прочности
@@ -1159,7 +1159,7 @@
                 
                 <div class="card">
                     <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                        Базовая прибыль: <strong>{{ "%.2f"|format(sensitivity.base_profit / 1000000) }} млн ₽</strong>
+                        Базовая прибыль: <strong>{{ "%.2f"|format(sensitivity.base_profit / 1000000) }} млн BYN</strong>
                         <span class="tooltip-icon">?<span class="tooltip-text">Торнадо-диаграмма показывает, какие факторы больше всего влияют на прибыль. Длинные полосы = высокое влияние.</span></span>
                     </p>
                     <div class="table-wrapper" style="margin-bottom: 1.5rem;">
@@ -1176,9 +1176,9 @@
                                 {% for factor in sensitivity.factors %}
                                 <tr>
                                     <td><strong>{{ factor.parameter }}</strong></td>
-                                    <td class="{{ 'negative' if factor.profit_low < 0 else '' }}">{{ "%.2f"|format(factor.profit_low / 1000000) }} млн ₽</td>
-                                    <td class="positive">{{ "%.2f"|format(factor.profit_high / 1000000) }} млн ₽</td>
-                                    <td><span class="value">± {{ "%.2f"|format(factor.impact / 2000000) }} млн ₽</span></td>
+                                    <td class="{{ 'negative' if factor.profit_low < 0 else '' }}">{{ "%.2f"|format(factor.profit_low / 1000000) }} млн BYN</td>
+                                    <td class="positive">{{ "%.2f"|format(factor.profit_high / 1000000) }} млн BYN</td>
+                                    <td><span class="value">± {{ "%.2f"|format(factor.impact / 2000000) }} млн BYN</span></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -1203,19 +1203,19 @@
                             <div class="label">Инвестиции
                                 <span class="tooltip-icon">?<span class="tooltip-text">Начальные вложения в производственную линию, оборудование и запуск</span></span>
                             </div>
-                            <div class="value negative">{{ "%.1f"|format(dynamics.initial_investment / 1000000) }} млн ₽</div>
+                            <div class="value negative">{{ "%.1f"|format(dynamics.initial_investment / 1000000) }} млн BYN</div>
                         </div>
                         <div class="recommendation-item">
                             <div class="label">Суммарная прибыль
                                 <span class="tooltip-icon">?<span class="tooltip-text">Сумма чистой прибыли за все {{ params.horizon_years }} лет (без дисконтирования)</span></span>
                             </div>
-                            <div class="value positive">{{ "%.2f"|format(dynamics.total_profit / 1000000) }} млн ₽</div>
+                            <div class="value positive">{{ "%.2f"|format(dynamics.total_profit / 1000000) }} млн BYN</div>
                         </div>
                         <div class="recommendation-item">
                             <div class="label">NPV
                                 <span class="tooltip-icon">?<span class="tooltip-text">Net Present Value — чистая приведённая стоимость. Учитывает стоимость денег во времени со ставкой {{ "%.1f"|format(dynamics.discount_rate * 100) }}% (инфляция + премия за риск 5%)</span></span>
                             </div>
-                            <div class="value {{ 'positive' if dynamics.npv > 0 else 'negative' }}">{{ "%.2f"|format(dynamics.npv / 1000000) }} млн ₽</div>
+                            <div class="value {{ 'positive' if dynamics.npv > 0 else 'negative' }}">{{ "%.2f"|format(dynamics.npv / 1000000) }} млн BYN</div>
                         </div>
                         <div class="recommendation-item">
                             <div class="label">Срок окупаемости
@@ -1257,7 +1257,7 @@
                                 <tr>
                                     <th>Год</th>
                                     <th>Объём (т)</th>
-                                    <th>Цена (₽/т)</th>
+                                    <th>Цена (BYN/т)</th>
                                     <th>Выручка</th>
                                     <th>Затраты</th>
                                     <th>Прибыль</th>
