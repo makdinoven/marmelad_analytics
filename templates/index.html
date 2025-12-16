@@ -627,6 +627,72 @@
             gap: 1.5rem;
         }
 
+        /* Two-column comparison layout */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .comparison-grid .card {
+            margin-bottom: 0;
+            max-height: 500px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .comparison-grid .card .table-wrapper {
+            overflow: auto;
+            flex: 1;
+            max-height: 400px;
+        }
+
+        .comparison-grid .card-title {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 1200px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scrollable table with sticky header */
+        .scrollable-table {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .scrollable-table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 1;
+        }
+
+        .product-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .product-badge.marmalade {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+
+        .product-badge.wafer {
+            background: rgba(230, 126, 34, 0.2);
+            color: #e67e22;
+        }
+
         .chart-container {
             background: var(--bg-card);
             border-radius: 12px;
@@ -734,8 +800,8 @@
 <body>
     <header>
         <div class="container">
-            <h1>Сценарный анализ рынка мармелада</h1>
-            <p>СОАО «Коммунарка» — Оценка выхода на рынок в условиях конкуренции с ОАО «Красный пищевик»</p>
+            <h1>Сценарный анализ продуктовых линий</h1>
+            <p>СОАО «Коммунарка» — Сравнение линий мармелада и вафель</p>
         </div>
     </header>
 
@@ -746,11 +812,9 @@
                 <span id="toggleIcon">▲</span> Скрыть параметры
             </button>
             <div class="nav-links">
-                <a href="#recommendation" class="nav-link">Рекомендация</a>
-                <a href="#scenarios" class="nav-link">Сценарии</a>
-                <a href="#optimization" class="nav-link">Оптимизация</a>
+                <a href="#lines-comparison" class="nav-link">Сравнение</a>
+                <a href="#scenarios" class="nav-link">Показатели</a>
                 <a href="#monte-carlo" class="nav-link">Монте-Карло</a>
-                <a href="#charts" class="nav-link">Графики</a>
                 <a href="#break-even" class="nav-link">Безубыточность</a>
                 <a href="#sensitivity" class="nav-link">Чувствительность</a>
                 <a href="#dynamics" class="nav-link">Динамика</a>
@@ -899,6 +963,55 @@
                         </div>
                     </div>
 
+                    <!-- ВАФЕЛЬНАЯ ЛИНИЯ -->
+                    <div style="width: 100%; border-top: 2px solid var(--accent-blue); margin: 0.5rem 0; padding-top: 0.5rem;">
+                        <span style="color: var(--accent-blue); font-weight: 600; font-size: 0.9rem;">🧇 ВАФЕЛЬНАЯ ЛИНИЯ</span>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Производство</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Мощность (т/год)</label>
+                                <input type="number" name="wafer_capacity" value="{{ params.wafer_capacity }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Цена (BYN/т)</label>
+                                <input type="number" name="wafer_price" value="{{ params.wafer_price }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Перем. затр. (BYN/т)</label>
+                                <input type="number" name="wafer_var_cost" value="{{ params.wafer_var_cost }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Пост. затр. (BYN/год)</label>
+                                <input type="number" name="wafer_fixed_costs" value="{{ params.wafer_fixed_costs }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="form-section-title">Спрос вафли (т)</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>🔵 Базовый</label>
+                                <input type="number" name="wafer_demand_base" value="{{ params.wafer_demand_base }}">
+                            </div>
+                            <div class="form-group">
+                                <label>🟢 Оптимист.</label>
+                                <input type="number" name="wafer_demand_opt" value="{{ params.wafer_demand_opt }}">
+                            </div>
+                            <div class="form-group">
+                                <label>🔴 Пессимист.</label>
+                                <input type="number" name="wafer_demand_pess" value="{{ params.wafer_demand_pess }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Инвестиции (BYN)</label>
+                                <input type="number" name="wafer_initial_investment" value="{{ params.wafer_initial_investment }}">
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-primary">
                         <span>🔄</span> Пересчитать
                     </button>
@@ -908,195 +1021,295 @@
 
         <!-- Results Area -->
         <main class="results-area">
-                <!-- Recommendation -->
-                <div id="recommendation" class="recommendation {{ recommendation.status }}">
-                    <div class="recommendation-header">
-                        <span class="recommendation-status">
-                            {% if recommendation.status == 'success' %}✅{% elif recommendation.status == 'warning' %}⚠️{% else %}❌{% endif %}
-                            Запуск линии: {{ recommendation.recommendation }}
-                        </span>
-                    </div>
-                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                        Базовый сценарий показывает {{ recommendation.reason }}.
-                    </p>
-                    <div class="recommendation-details">
-                        <div class="recommendation-item">
-                            <div class="label">Прибыль (базовый)
-                                <span class="tooltip-icon">?<span class="tooltip-text">Чистая прибыль при базовом сценарии спроса после вычета всех затрат</span></span>
-                            </div>
-                            <div class="value {{ 'positive' if recommendation.base_profit > 0 else 'negative' }}">
-                                {{ "%.2f"|format(recommendation.base_profit / 1000000) }} млн BYN
-                            </div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Прибыль (оптимист.)
-                                <span class="tooltip-icon">?<span class="tooltip-text">Прибыль при высоком спросе, росте цен и снижении затрат</span></span>
-                            </div>
-                            <div class="value positive">
-                                {{ "%.2f"|format(recommendation.opt_profit / 1000000) }} млн BYN
-                            </div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Прибыль (пессимист.)
-                                <span class="tooltip-icon">?<span class="tooltip-text">Прибыль при низком спросе, падении цен и росте затрат</span></span>
-                            </div>
-                            <div class="value {{ 'positive' if recommendation.pess_profit > 0 else 'negative' }}">
-                                {{ "%.2f"|format(recommendation.pess_profit / 1000000) }} млн BYN
-                            </div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Риск убытка
-                                <span class="tooltip-icon">?<span class="tooltip-text">Вероятность получить убыток по результатам Монте-Карло симуляции ({{ params.mc_simulations }} прогонов)</span></span>
-                            </div>
-                            <div class="value {{ 'positive' if recommendation.prob_loss_base < 10 else 'negative' }}">
-                                {{ "%.1f"|format(recommendation.prob_loss_base) }}%
-                            </div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Маржинальность
-                                <span class="tooltip-icon">?<span class="tooltip-text">Доля прибыли в выручке: (Цена - Перем.затраты) / Цена × 100%</span></span>
-                            </div>
-                            <div class="value positive">{{ "%.0f"|format(recommendation.margin) }}%</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Загрузка линии
-                                <span class="tooltip-icon">?<span class="tooltip-text">Отношение объёма выпуска к максимальной мощности линии ({{ params.capacity_new_line }} т/год)</span></span>
-                            </div>
-                            <div class="value">{{ "%.0f"|format(recommendation.optimal_load) }}%</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Main Results Table -->
-                <div id="scenarios" class="card">
-                    <h3 class="card-title"><span class="icon">📊</span> Ключевые показатели по сценариям</h3>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    {% for col in df_columns %}
-                                    <th>{{ col }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in df %}
-                                <tr class="{% if row['Сценарий'] == 'Базовый' %}scenario-base{% elif row['Сценарий'] == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
-                                    {% for col in df_columns %}
-                                    <td>{{ row[col] }}</td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Optimization Results -->
-                <div id="optimization" class="card">
-                    <h3 class="card-title"><span class="icon">🎯</span> Результаты оптимизации (PuLP)</h3>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Сценарий</th>
-                                    <th>Статус</th>
-                                    <th>Оптим. объём (т)</th>
-                                    <th>Макс. прибыль</th>
-                                    <th>Загрузка линии</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for opt in opt_results %}
-                                <tr class="{% if opt.scenario == 'Базовый' %}scenario-base{% elif opt.scenario == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
-                                    <td>{{ opt.scenario }}</td>
-                                    <td>{{ opt.status }}</td>
-                                    <td>{{ "%.0f"|format(opt.optimal_volume) }}</td>
-                                    <td>{{ "%.2f"|format(opt.optimal_profit / 1000000) }} млн BYN</td>
-                                    <td>{{ "%.1f"|format(opt.utilization) }}%</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Monte Carlo Stats -->
-                <div id="monte-carlo" class="card">
-                    <h3 class="card-title"><span class="icon">🎲</span> Статистика Монте-Карло ({{ params.mc_simulations }} прогонов)</h3>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Сценарий</th>
-                                    <th>Средняя прибыль</th>
-                                    <th>Стд. откл.</th>
-                                    <th>Минимум</th>
-                                    <th>Максимум</th>
-                                    <th>5% перцентиль</th>
-                                    <th>95% перцентиль</th>
-                                    <th>P(убыток)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for stat in mc_stats %}
-                                <tr class="{% if stat.scenario == 'Базовый' %}scenario-base{% elif stat.scenario == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
-                                    <td>{{ stat.scenario }}</td>
-                                    <td>{{ stat.mean }}</td>
-                                    <td>{{ stat.std }}</td>
-                                    <td>{{ stat.min }}</td>
-                                    <td>{{ stat.max }}</td>
-                                    <td>{{ stat.p5 }}</td>
-                                    <td>{{ stat.p95 }}</td>
-                                    <td>{{ stat.prob_loss }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Charts Section -->
-                <h2 id="charts" class="section-title">📈 Визуализация результатов</h2>
+                <!-- СРАВНЕНИЕ ЛИНИЙ -->
+                <h2 id="lines-comparison" class="section-title">⚖️ Сравнение продуктовых линий: Мармелад vs Вафли</h2>
                 
                 <div class="info-box">
-                    <strong>💡 Подсказка:</strong> Нажмите на любой график, чтобы открыть его в полноэкранном режиме.
+                    <strong>Сводное сравнение:</strong> Ниже представлено сравнение двух производственных линий по ключевым показателям — прибыльность, риски, окупаемость и ROI.
                 </div>
-
-                <div class="charts-grid">
-                    <div class="chart-container">
-                        <div class="chart-title">Сравнение выручки, затрат и прибыли</div>
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_comparison }}" alt="Сравнение сценариев" onclick="openImageModal(this)">
-                    </div>
-                    <div class="chart-container">
-                        <div class="chart-title">Распределение долей рынка</div>
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_market_share }}" alt="Доли рынка" onclick="openImageModal(this)">
+                
+                <!-- Сводная таблица сравнения -->
+                <div class="card">
+                    <h3 class="card-title"><span class="icon">📊</span> Сводные показатели</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Показатель</th>
+                                    <th style="background: #3498db22; color: #3498db;">🍬 Мармелад</th>
+                                    <th style="background: #e67e2222; color: #e67e22;">🧇 Вафли</th>
+                                    <th>Лучший вариант</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Мощность линии</strong></td>
+                                    <td>{{ lines_comparison.marmalade.capacity }} т/год</td>
+                                    <td>{{ lines_comparison.wafer.capacity }} т/год</td>
+                                    <td>—</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Инвестиции</strong></td>
+                                    <td>{{ "%.1f"|format(lines_comparison.marmalade.investment / 1000000) }} млн BYN</td>
+                                    <td>{{ "%.1f"|format(lines_comparison.wafer.investment / 1000000) }} млн BYN</td>
+                                    <td>{% if lines_comparison.marmalade.investment < lines_comparison.wafer.investment %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Прибыль (базовый)</strong>
+                                        <span class="tooltip-icon">?<span class="tooltip-text">Чистая прибыль при базовом сценарии спроса</span></span>
+                                    </td>
+                                    <td class="{{ 'positive' if lines_comparison.marmalade.base_profit > 0 else 'negative' }}">{{ "%.2f"|format(lines_comparison.marmalade.base_profit / 1000000) }} млн BYN</td>
+                                    <td class="{{ 'positive' if lines_comparison.wafer.base_profit > 0 else 'negative' }}">{{ "%.2f"|format(lines_comparison.wafer.base_profit / 1000000) }} млн BYN</td>
+                                    <td>{% if lines_comparison.best.profit == 'marmalade' %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Маржинальность</strong></td>
+                                    <td>{{ "%.1f"|format(lines_comparison.marmalade.margin) }}%</td>
+                                    <td>{{ "%.1f"|format(lines_comparison.wafer.margin) }}%</td>
+                                    <td>{% if lines_comparison.marmalade.margin > lines_comparison.wafer.margin %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Вероятность убытка</strong>
+                                        <span class="tooltip-icon">?<span class="tooltip-text">По результатам Монте-Карло симуляции</span></span>
+                                    </td>
+                                    <td class="{{ 'positive' if lines_comparison.marmalade.prob_loss < 20 else 'negative' }}">{{ "%.1f"|format(lines_comparison.marmalade.prob_loss) }}%</td>
+                                    <td class="{{ 'positive' if lines_comparison.wafer.prob_loss < 20 else 'negative' }}">{{ "%.1f"|format(lines_comparison.wafer.prob_loss) }}%</td>
+                                    <td>{% if lines_comparison.best.risk == 'marmalade' %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Точка безубыточности</strong></td>
+                                    <td>{{ "%.0f"|format(lines_comparison.marmalade.break_even) }} т</td>
+                                    <td>{{ "%.0f"|format(lines_comparison.wafer.break_even) }} т</td>
+                                    <td>{% if lines_comparison.marmalade.break_even < lines_comparison.wafer.break_even %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Запас прочности</strong></td>
+                                    <td class="{{ 'positive' if lines_comparison.marmalade.safety_margin > 20 else 'negative' }}">{{ "%.1f"|format(lines_comparison.marmalade.safety_margin) }}%</td>
+                                    <td class="{{ 'positive' if lines_comparison.wafer.safety_margin > 20 else 'negative' }}">{{ "%.1f"|format(lines_comparison.wafer.safety_margin) }}%</td>
+                                    <td>{% if lines_comparison.marmalade.safety_margin > lines_comparison.wafer.safety_margin %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>NPV</strong>
+                                        <span class="tooltip-icon">?<span class="tooltip-text">Чистая приведённая стоимость за {{ params.horizon_years }} лет</span></span>
+                                    </td>
+                                    <td class="{{ 'positive' if lines_comparison.marmalade.npv > 0 else 'negative' }}">{{ "%.2f"|format(lines_comparison.marmalade.npv / 1000000) }} млн BYN</td>
+                                    <td class="{{ 'positive' if lines_comparison.wafer.npv > 0 else 'negative' }}">{{ "%.2f"|format(lines_comparison.wafer.npv / 1000000) }} млн BYN</td>
+                                    <td>{% if lines_comparison.best.npv == 'marmalade' %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>ROI</strong></td>
+                                    <td class="{{ 'positive' if lines_comparison.marmalade.roi > 0 else 'negative' }}">{{ "%.1f"|format(lines_comparison.marmalade.roi) }}%</td>
+                                    <td class="{{ 'positive' if lines_comparison.wafer.roi > 0 else 'negative' }}">{{ "%.1f"|format(lines_comparison.wafer.roi) }}%</td>
+                                    <td>{% if lines_comparison.best.roi == 'marmalade' %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Срок окупаемости</strong></td>
+                                    <td>{% if lines_comparison.marmalade.payback %}{{ lines_comparison.marmalade.payback }} лет{% else %}> {{ params.horizon_years }} лет{% endif %}</td>
+                                    <td>{% if lines_comparison.wafer.payback %}{{ lines_comparison.wafer.payback }} лет{% else %}> {{ params.horizon_years }} лет{% endif %}</td>
+                                    <td>{% if lines_comparison.best.payback == 'marmalade' %}🍬 Мармелад{% else %}🧇 Вафли{% endif %}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                <div class="card" style="margin-top: 1.5rem;">
-                    <h3 class="card-title"><span class="icon">🎲</span> Распределение прибыли (Монте-Карло)
-                        <span class="tooltip-icon">?<span class="tooltip-text">Гистограмма показывает распределение возможных значений прибыли из {{ params.mc_simulations }} симуляций. Красная зона — убыток, зелёная — прибыль.</span></span>
-                    </h3>
+                
+                <!-- Графики сравнения -->
+                <div class="card">
+                    <h3 class="card-title"><span class="icon">📈</span> Визуальное сравнение</h3>
                     
                     <div class="tabs">
-                        <button class="tab active" onclick="showTab('mc-base', this)">Базовый</button>
-                        <button class="tab" onclick="showTab('mc-opt', this)">Оптимистичный</button>
-                        <button class="tab" onclick="showTab('mc-pess', this)">Пессимистичный</button>
-                        <button class="tab" onclick="showTab('mc-compare', this)">Сравнение</button>
+                        <button class="tab active" onclick="showCompareTab('compare-profit', this)">Прибыль и NPV</button>
+                        <button class="tab" onclick="showCompareTab('compare-risk', this)">Риски</button>
+                        <button class="tab" onclick="showCompareTab('compare-roi', this)">ROI и окупаемость</button>
+                        <button class="tab" onclick="showCompareTab('compare-be', this)">Безубыточность</button>
                     </div>
 
-                    <div id="mc-base" class="tab-content active">
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_base }}" alt="Монте-Карло: Базовый" onclick="openImageModal(this)" style="max-height: 350px;">
+                    <div id="compare-profit" class="tab-content active">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_lines_profit }}" alt="Сравнение прибыли" onclick="openImageModal(this)" style="max-height: 350px;">
                     </div>
-                    <div id="mc-opt" class="tab-content">
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_opt }}" alt="Монте-Карло: Оптимистичный" onclick="openImageModal(this)" style="max-height: 350px;">
+                    <div id="compare-risk" class="tab-content">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_lines_risk }}" alt="Сравнение рисков" onclick="openImageModal(this)" style="max-height: 350px;">
                     </div>
-                    <div id="mc-pess" class="tab-content">
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_pess }}" alt="Монте-Карло: Пессимистичный" onclick="openImageModal(this)" style="max-height: 350px;">
+                    <div id="compare-roi" class="tab-content">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_lines_roi }}" alt="Сравнение ROI" onclick="openImageModal(this)" style="max-height: 350px;">
                     </div>
-                    <div id="mc-compare" class="tab-content">
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_mc_comparison }}" alt="Сравнение Монте-Карло" onclick="openImageModal(this)" style="max-height: 350px;">
+                    <div id="compare-be" class="tab-content">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_lines_break_even }}" alt="Сравнение безубыточности" onclick="openImageModal(this)" style="max-height: 350px;">
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ: МАРМЕЛАД vs ВАФЛИ -->
+                <!-- ============================================ -->
+                <h2 id="scenarios" class="section-title">📊 Ключевые показатели по сценариям</h2>
+                
+                <div class="comparison-grid">
+                    <!-- Мармелад -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🍬</span> Мармелад<span class="product-badge marmalade">{{ params.capacity_new_line }} т/год</span></h3>
+                        <div class="table-wrapper scrollable-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        {% for col in df_columns %}
+                                        <th>{{ col }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in df %}
+                                    <tr class="{% if row['Сценарий'] == 'Базовый' %}scenario-base{% elif row['Сценарий'] == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                        {% for col in df_columns %}
+                                        <td>{{ row[col] }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Вафли -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🧇</span> Вафли<span class="product-badge wafer">{{ params.wafer_capacity }} т/год</span></h3>
+                        <div class="table-wrapper scrollable-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        {% for col in wafer_df_columns %}
+                                        <th>{{ col }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in wafer_df %}
+                                    <tr class="{% if row['Сценарий'] == 'Базовый' %}scenario-base{% elif row['Сценарий'] == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                        {% for col in wafer_df_columns %}
+                                        <td>{{ row[col] }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- МОНТЕ-КАРЛО: МАРМЕЛАД vs ВАФЛИ -->
+                <!-- ============================================ -->
+                <h2 id="monte-carlo" class="section-title">🎲 Монте-Карло ({{ params.mc_simulations }} прогонов)</h2>
+                
+                <div class="comparison-grid">
+                    <!-- Мармелад MC -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🍬</span> Мармелад</h3>
+                        <div class="table-wrapper scrollable-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Сценарий</th>
+                                        <th>Средняя прибыль</th>
+                                        <th>Стд. откл.</th>
+                                        <th>Минимум</th>
+                                        <th>Максимум</th>
+                                        <th>5% перцентиль</th>
+                                        <th>95% перцентиль</th>
+                                        <th>P(убыток)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in mc_stats %}
+                                    <tr class="{% if stat.scenario == 'Базовый' %}scenario-base{% elif stat.scenario == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                        <td>{{ stat.scenario }}</td>
+                                        <td>{{ stat.mean }}</td>
+                                        <td>{{ stat.std }}</td>
+                                        <td>{{ stat.min }}</td>
+                                        <td>{{ stat.max }}</td>
+                                        <td>{{ stat.p5 }}</td>
+                                        <td>{{ stat.p95 }}</td>
+                                        <td>{{ stat.prob_loss }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Вафли MC -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🧇</span> Вафли</h3>
+                        <div class="table-wrapper scrollable-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Сценарий</th>
+                                        <th>Средняя прибыль</th>
+                                        <th>Стд. откл.</th>
+                                        <th>Минимум</th>
+                                        <th>Максимум</th>
+                                        <th>5% перцентиль</th>
+                                        <th>95% перцентиль</th>
+                                        <th>P(убыток)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in wafer_mc_stats %}
+                                    <tr class="{% if stat.scenario == 'Базовый' %}scenario-base{% elif stat.scenario == 'Оптимистичный' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                        <td>{{ stat.scenario }}</td>
+                                        <td>{{ stat.mean }}</td>
+                                        <td>{{ stat.std }}</td>
+                                        <td>{{ stat.min }}</td>
+                                        <td>{{ stat.max }}</td>
+                                        <td>{{ stat.p5 }}</td>
+                                        <td>{{ stat.p95 }}</td>
+                                        <td>{{ stat.prob_loss }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Графики Монте-Карло -->
+                <div class="comparison-grid" style="margin-top: 1.5rem;">
+                    <!-- Мармелад гистограммы -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">📊</span> Распределение прибыли: Мармелад</h3>
+                        <div class="tabs">
+                            <button class="tab active" onclick="showTab('mc-marm-base', this)">Базовый</button>
+                            <button class="tab" onclick="showTab('mc-marm-opt', this)">Оптимистичный</button>
+                            <button class="tab" onclick="showTab('mc-marm-pess', this)">Пессимистичный</button>
+                        </div>
+                        <div id="mc-marm-base" class="tab-content active">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_mc_base }}" alt="МК: Базовый" onclick="openImageModal(this)" style="max-height: 300px;">
+                        </div>
+                        <div id="mc-marm-opt" class="tab-content">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_mc_opt }}" alt="МК: Оптимистичный" onclick="openImageModal(this)" style="max-height: 300px;">
+                        </div>
+                        <div id="mc-marm-pess" class="tab-content">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_mc_pess }}" alt="МК: Пессимистичный" onclick="openImageModal(this)" style="max-height: 300px;">
+                        </div>
+                    </div>
+                    
+                    <!-- Вафли гистограммы -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">📊</span> Распределение прибыли: Вафли</h3>
+                        <div class="tabs">
+                            <button class="tab active" onclick="showTab('mc-wafer-base', this)">Базовый</button>
+                            <button class="tab" onclick="showTab('mc-wafer-opt', this)">Оптимистичный</button>
+                            <button class="tab" onclick="showTab('mc-wafer-pess', this)">Пессимистичный</button>
+                        </div>
+                        <div id="mc-wafer-base" class="tab-content active">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_wafer_mc_base }}" alt="МК вафли: Базовый" onclick="openImageModal(this)" style="max-height: 300px;">
+                        </div>
+                        <div id="mc-wafer-opt" class="tab-content">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_wafer_mc_opt }}" alt="МК вафли: Оптимистичный" onclick="openImageModal(this)" style="max-height: 300px;">
+                        </div>
+                        <div id="mc-wafer-pess" class="tab-content">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_wafer_mc_pess }}" alt="МК вафли: Пессимистичный" onclick="openImageModal(this)" style="max-height: 300px;">
+                        </div>
                     </div>
                 </div>
 
@@ -1107,45 +1320,59 @@
                     <strong>Что это?</strong> Точка безубыточности (ТБ) — минимальный объём продаж, при котором выручка покрывает все затраты. Ниже ТБ — убыток, выше — прибыль.
                 </div>
                 
-                <div class="card">
-                    <div class="recommendation-details" style="margin-bottom: 1.5rem;">
-                        <div class="recommendation-item">
-                            <div class="label">Точка безубыточности
-                                <span class="tooltip-icon">?<span class="tooltip-text">Объём продаж, при котором прибыль = 0. Формула: Постоянные затраты / (Цена - Переменные затраты)</span></span>
+                <div class="comparison-grid">
+                    <!-- Мармелад BE -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🍬</span> Мармелад</h3>
+                        <div class="recommendation-details">
+                            <div class="recommendation-item">
+                                <div class="label">Точка безубыточности</div>
+                                <div class="value">{{ "%.0f"|format(break_even.break_even_volume) }} т</div>
                             </div>
-                            <div class="value">{{ "%.0f"|format(break_even.break_even_volume) }} т</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Выручка в ТБ
-                                <span class="tooltip-icon">?<span class="tooltip-text">Объём выручки, необходимый для покрытия всех затрат</span></span>
+                            <div class="recommendation-item">
+                                <div class="label">Маржа на тонну</div>
+                                <div class="value positive">{{ "%.0f"|format(break_even.margin_per_unit) }} BYN</div>
                             </div>
-                            <div class="value">{{ "%.2f"|format(break_even.break_even_revenue / 1000000) }} млн BYN</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Маржа на тонну
-                                <span class="tooltip-icon">?<span class="tooltip-text">Вклад каждой тонны в покрытие постоянных затрат: Цена - Переменные затраты</span></span>
+                            <div class="recommendation-item">
+                                <div class="label">Запас прочности</div>
+                                <div class="value {{ 'positive' if break_even.safety_margin > 20 else 'negative' }}">{{ "%.1f"|format(break_even.safety_margin) }}%</div>
                             </div>
-                            <div class="value positive">{{ "%.0f"|format(break_even.margin_per_unit) }} BYN</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Запас прочности
-                                <span class="tooltip-icon">?<span class="tooltip-text">Насколько текущие продажи превышают ТБ: (Объём - ТБ) / Объём × 100%. Чем выше — тем безопаснее.</span></span>
+                            <div class="recommendation-item">
+                                <div class="label">Коэфф. покрытия</div>
+                                <div class="value">{{ "%.1f"|format(break_even.coverage_ratio) }}%</div>
                             </div>
-                            <div class="value {{ 'positive' if break_even.safety_margin > 20 else 'negative' }}">{{ "%.1f"|format(break_even.safety_margin) }}%</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Коэфф. покрытия
-                                <span class="tooltip-icon">?<span class="tooltip-text">Доля маржи в цене: (Цена - Перем.затраты) / Цена × 100%</span></span>
-                            </div>
-                            <div class="value">{{ "%.1f"|format(break_even.coverage_ratio) }}%</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Базовый объём</div>
-                            <div class="value">{{ "%.0f"|format(break_even.base_volume) }} т</div>
                         </div>
                     </div>
+                    
+                    <!-- Вафли BE -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🧇</span> Вафли</h3>
+                        <div class="recommendation-details">
+                            <div class="recommendation-item">
+                                <div class="label">Точка безубыточности</div>
+                                <div class="value">{{ "%.0f"|format(wafer_break_even.break_even_volume) }} т</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">Маржа на тонну</div>
+                                <div class="value positive">{{ "%.0f"|format(wafer_break_even.margin_per_unit) }} BYN</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">Запас прочности</div>
+                                <div class="value {{ 'positive' if wafer_break_even.safety_margin > 20 else 'negative' }}">{{ "%.1f"|format(wafer_break_even.safety_margin) }}%</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">Коэфф. покрытия</div>
+                                <div class="value">{{ "%.1f"|format(wafer_break_even.coverage_ratio) }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- График сравнения безубыточности -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3 class="card-title"><span class="icon">📈</span> Сравнение точек безубыточности</h3>
                     <div class="chart-container">
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_break_even }}" alt="Точка безубыточности" onclick="openImageModal(this)">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_lines_break_even }}" alt="Сравнение безубыточности" onclick="openImageModal(this)">
                     </div>
                 </div>
 
@@ -1153,39 +1380,85 @@
                 <h2 id="sensitivity" class="section-title">🎯 Анализ чувствительности</h2>
                 
                 <div class="info-box">
-                    <strong>Что это?</strong> Анализ показывает, как изменение каждого параметра на ±{{ "%.0f"|format(sensitivity.variation * 100) }}% влияет на прибыль. 
+                    <strong>Что это?</strong> Анализ показывает, как изменение каждого параметра на ±30% влияет на прибыль. 
                     Параметры отсортированы по силе влияния — <strong>цена</strong> обычно самый важный фактор.
                 </div>
                 
-                <div class="card">
-                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                        Базовая прибыль: <strong>{{ "%.2f"|format(sensitivity.base_profit / 1000000) }} млн BYN</strong>
-                        <span class="tooltip-icon">?<span class="tooltip-text">Торнадо-диаграмма показывает, какие факторы больше всего влияют на прибыль. Длинные полосы = высокое влияние.</span></span>
-                    </p>
-                    <div class="table-wrapper" style="margin-bottom: 1.5rem;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Параметр</th>
-                                    <th>При снижении на {{ "%.0f"|format(sensitivity.variation * 100) }}%</th>
-                                    <th>При увеличении на {{ "%.0f"|format(sensitivity.variation * 100) }}%</th>
-                                    <th>Размах влияния</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for factor in sensitivity.factors %}
-                                <tr>
-                                    <td><strong>{{ factor.parameter }}</strong></td>
-                                    <td class="{{ 'negative' if factor.profit_low < 0 else '' }}">{{ "%.2f"|format(factor.profit_low / 1000000) }} млн BYN</td>
-                                    <td class="positive">{{ "%.2f"|format(factor.profit_high / 1000000) }} млн BYN</td>
-                                    <td><span class="value">± {{ "%.2f"|format(factor.impact / 2000000) }} млн BYN</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div class="comparison-grid">
+                    <!-- Мармелад -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🍬</span> Мармелад</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                            Базовая прибыль: <strong>{{ "%.2f"|format(sensitivity.base_profit / 1000000) }} млн BYN</strong>
+                        </p>
+                        <div class="table-wrapper scrollable-table" style="margin-bottom: 1rem;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Параметр</th>
+                                        <th>−30%</th>
+                                        <th>+30%</th>
+                                        <th>Размах</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for factor in sensitivity.factors %}
+                                    <tr>
+                                        <td><strong>{{ factor.parameter }}</strong></td>
+                                        <td class="{{ 'negative' if factor.profit_low < 0 else '' }}">{{ "%.2f"|format(factor.profit_low / 1000000) }} млн</td>
+                                        <td class="positive">{{ "%.2f"|format(factor.profit_high / 1000000) }} млн</td>
+                                        <td>± {{ "%.2f"|format(factor.impact / 2000000) }} млн</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="chart-container">
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_tornado }}" alt="Торнадо-диаграмма" onclick="openImageModal(this)">
+                    
+                    <!-- Вафли -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🧇</span> Вафли</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                            Базовая прибыль: <strong>{{ "%.2f"|format(wafer_sensitivity.base_profit / 1000000) }} млн BYN</strong>
+                        </p>
+                        <div class="table-wrapper scrollable-table" style="margin-bottom: 1rem;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Параметр</th>
+                                        <th>−30%</th>
+                                        <th>+30%</th>
+                                        <th>Размах</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for factor in wafer_sensitivity.factors %}
+                                    <tr>
+                                        <td><strong>{{ factor.parameter }}</strong></td>
+                                        <td class="{{ 'negative' if factor.profit_low < 0 else '' }}">{{ "%.2f"|format(factor.profit_low / 1000000) }} млн</td>
+                                        <td class="positive">{{ "%.2f"|format(factor.profit_high / 1000000) }} млн</td>
+                                        <td>± {{ "%.2f"|format(factor.impact / 2000000) }} млн</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Торнадо-диаграммы -->
+                <div class="comparison-grid" style="margin-top: 1.5rem;">
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">📊</span> Торнадо: Мармелад</h3>
+                        <div class="chart-container">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_tornado }}" alt="Торнадо мармелад" onclick="openImageModal(this)" style="max-height: 280px;">
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">📊</span> Торнадо: Вафли</h3>
+                        <div class="chart-container">
+                            <img class="chart-img" src="data:image/png;base64,{{ chart_wafer_tornado }}" alt="Торнадо вафли" onclick="openImageModal(this)" style="max-height: 280px;">
+                        </div>
                     </div>
                 </div>
 
@@ -1197,109 +1470,109 @@
                     а также случайные факторы: волатильность спроса, экономические циклы, конкурентное давление и непредвиденные расходы.
                 </div>
                 
-                <div class="card">
-                    <div class="recommendation-details" style="margin-bottom: 1.5rem;">
-                        <div class="recommendation-item">
-                            <div class="label">Инвестиции
-                                <span class="tooltip-icon">?<span class="tooltip-text">Начальные вложения в производственную линию, оборудование и запуск</span></span>
+                <div class="comparison-grid">
+                    <!-- Мармелад Dynamics -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🍬</span> Мармелад</h3>
+                        <div class="recommendation-details">
+                            <div class="recommendation-item">
+                                <div class="label">Инвестиции</div>
+                                <div class="value negative">{{ "%.1f"|format(dynamics.initial_investment / 1000000) }} млн</div>
                             </div>
-                            <div class="value negative">{{ "%.1f"|format(dynamics.initial_investment / 1000000) }} млн BYN</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Суммарная прибыль
-                                <span class="tooltip-icon">?<span class="tooltip-text">Сумма чистой прибыли за все {{ params.horizon_years }} лет (без дисконтирования)</span></span>
+                            <div class="recommendation-item">
+                                <div class="label">Сум. прибыль</div>
+                                <div class="value {{ 'positive' if dynamics.total_profit > 0 else 'negative' }}">{{ "%.2f"|format(dynamics.total_profit / 1000000) }} млн</div>
                             </div>
-                            <div class="value positive">{{ "%.2f"|format(dynamics.total_profit / 1000000) }} млн BYN</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">NPV
-                                <span class="tooltip-icon">?<span class="tooltip-text">Net Present Value — чистая приведённая стоимость. Учитывает стоимость денег во времени со ставкой {{ "%.1f"|format(dynamics.discount_rate * 100) }}% (инфляция + премия за риск 5%)</span></span>
+                            <div class="recommendation-item">
+                                <div class="label">NPV</div>
+                                <div class="value {{ 'positive' if dynamics.npv > 0 else 'negative' }}">{{ "%.2f"|format(dynamics.npv / 1000000) }} млн</div>
                             </div>
-                            <div class="value {{ 'positive' if dynamics.npv > 0 else 'negative' }}">{{ "%.2f"|format(dynamics.npv / 1000000) }} млн BYN</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Срок окупаемости
-                                <span class="tooltip-icon">?<span class="tooltip-text">Количество лет, за которое накопленный денежный поток станет положительным</span></span>
+                            <div class="recommendation-item">
+                                <div class="label">Окупаемость</div>
+                                <div class="value">{% if dynamics.payback_year %}{{ dynamics.payback_year }} лет{% else %}> {{ params.horizon_years }}{% endif %}</div>
                             </div>
-                            <div class="value {{ 'positive' if dynamics.payback_year and dynamics.payback_year <= 3 else '' }}">
-                                {% if dynamics.payback_year %}{{ dynamics.payback_year }} лет{% else %}> {{ params.horizon_years }} лет{% endif %}
+                            <div class="recommendation-item">
+                                <div class="label">ROI</div>
+                                <div class="value {{ 'positive' if dynamics.simple_roi > 0 else 'negative' }}">{{ "%.1f"|format(dynamics.simple_roi) }}%</div>
                             </div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">ROI (простой)
-                                <span class="tooltip-icon">?<span class="tooltip-text">Return on Investment — отношение суммарной прибыли к инвестициям × 100%</span></span>
+                            <div class="recommendation-item">
+                                <div class="label">ROI/год</div>
+                                <div class="value">{{ "%.1f"|format(dynamics.avg_annual_roi) }}%</div>
                             </div>
-                            <div class="value {{ 'positive' if dynamics.simple_roi > 0 else 'negative' }}">{{ "%.1f"|format(dynamics.simple_roi) }}%</div>
-                        </div>
-                        <div class="recommendation-item">
-                            <div class="label">Среднегодовой ROI
-                                <span class="tooltip-icon">?<span class="tooltip-text">ROI делённый на количество лет — среднегодовая доходность проекта</span></span>
-                            </div>
-                            <div class="value">{{ "%.1f"|format(dynamics.avg_annual_roi) }}%</div>
                         </div>
                     </div>
                     
-                    <!-- Legend for charts -->
-                    <div style="margin: 1rem 0; padding: 0.75rem; background: var(--bg-input); border-radius: 8px;">
-                        <strong style="font-size: 0.85rem;">Условные обозначения на графиках:</strong>
-                        <div style="margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 1rem;">
-                            <span class="legend-item"><span class="legend-icon">⚠️</span> Год с непредвиденными расходами (ремонт, штрафы, форс-мажор)</span>
-                            <span class="legend-item"><span class="legend-icon" style="color: #2ecc71;">●</span> Зона прибыли</span>
-                            <span class="legend-item"><span class="legend-icon" style="color: #e74c3c;">●</span> Зона убытка</span>
-                            <span class="legend-item"><span class="legend-icon" style="color: orange;">▲</span> Фактор рыночного спроса (>1 = рост, <1 = падение)</span>
+                    <!-- Вафли Dynamics -->
+                    <div class="card">
+                        <h3 class="card-title"><span class="icon">🧇</span> Вафли</h3>
+                        <div class="recommendation-details">
+                            <div class="recommendation-item">
+                                <div class="label">Инвестиции</div>
+                                <div class="value negative">{{ "%.1f"|format(wafer_dynamics.initial_investment / 1000000) }} млн</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">Сум. прибыль</div>
+                                <div class="value {{ 'positive' if wafer_dynamics.total_profit > 0 else 'negative' }}">{{ "%.2f"|format(wafer_dynamics.total_profit / 1000000) }} млн</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">NPV</div>
+                                <div class="value {{ 'positive' if wafer_dynamics.npv > 0 else 'negative' }}">{{ "%.2f"|format(wafer_dynamics.npv / 1000000) }} млн</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">Окупаемость</div>
+                                <div class="value">{% if wafer_dynamics.payback_year %}{{ wafer_dynamics.payback_year }} лет{% else %}> {{ params.horizon_years }}{% endif %}</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">ROI</div>
+                                <div class="value {{ 'positive' if wafer_dynamics.simple_roi > 0 else 'negative' }}">{{ "%.1f"|format(wafer_dynamics.simple_roi) }}%</div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="label">ROI/год</div>
+                                <div class="value">{{ "%.1f"|format(wafer_dynamics.avg_annual_roi) }}%</div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <h4 style="margin: 1rem 0 0.5rem; color: var(--text-secondary);">Прогноз по годам</h4>
-                    <div class="table-wrapper" style="margin-bottom: 1.5rem;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Год</th>
-                                    <th>Объём (т)</th>
-                                    <th>Цена (BYN/т)</th>
-                                    <th>Выручка</th>
-                                    <th>Затраты</th>
-                                    <th>Прибыль</th>
-                                    <th>Накопленный CF</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for year_data in dynamics.yearly_data %}
-                                <tr>
-                                    <td><strong>{{ year_data.year }}</strong></td>
-                                    <td>{{ "%.0f"|format(year_data.volume) }}</td>
-                                    <td>{{ "%.0f"|format(year_data.price) }}</td>
-                                    <td>{{ "%.2f"|format(year_data.revenue / 1000000) }} млн</td>
-                                    <td>{{ "%.2f"|format((year_data.total_var_costs + year_data.fixed_costs) / 1000000) }} млн</td>
-                                    <td class="{{ 'positive' if year_data.net_profit > 0 else 'negative' }}">{{ "%.2f"|format(year_data.net_profit / 1000000) }} млн</td>
-                                    <td class="{{ 'positive' if year_data.cumulative_cashflow > 0 else 'negative' }}">{{ "%.2f"|format(year_data.cumulative_cashflow / 1000000) }} млн</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="chart-container full-width">
-                        <img class="chart-img" src="data:image/png;base64,{{ chart_dynamics }}" alt="Динамика по годам" onclick="openImageModal(this)" style="max-height: 400px;">
                     </div>
                 </div>
+                
+                <!-- График сравнения окупаемости -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3 class="card-title"><span class="icon">📈</span> Сравнение динамики окупаемости</h3>
+                    <div class="chart-container">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_lines_roi }}" alt="Сравнение ROI" onclick="openImageModal(this)">
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
 
     <footer>
-        <p>Сценарный анализ выхода СОАО «Коммунарка» на рынок мармелада</p>
+        <p>Сценарный анализ продуктовых линий СОАО «Коммунарка» — Мармелад vs Вафли</p>
         <p>Python + Flask + Jinja2 | pandas, numpy, matplotlib, PuLP</p>
     </footer>
 
     <script>
         // Tab switching for Monte-Carlo
         function showTab(tabId, button) {
-            document.querySelectorAll('.tab-content').forEach(content => {
+            // Находим родительский контейнер
+            const parentCard = button.closest('.card');
+            parentCard.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            document.querySelectorAll('.tab').forEach(tab => {
+            parentCard.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            button.classList.add('active');
+        }
+
+        // Tab switching for Lines Comparison
+        function showCompareTab(tabId, button) {
+            const parentCard = button.closest('.card');
+            parentCard.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            parentCard.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             document.getElementById(tabId).classList.add('active');

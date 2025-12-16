@@ -288,6 +288,87 @@ def sensitivity_analysis(params):
     }
 
 
+def wafer_sensitivity_analysis(params):
+    """Анализ чувствительности для вафельной линии."""
+    base_volume = min(params['wafer_demand_base'], params['wafer_capacity'])
+    base_price = params['wafer_price']
+    base_var_cost = params['wafer_var_cost']
+    fixed_costs = params['wafer_fixed_costs']
+    
+    # Базовая прибыль
+    base_profit = base_volume * (base_price - base_var_cost) - fixed_costs
+    
+    # Диапазон изменения параметров (±30%)
+    variation = 0.30
+    
+    results = []
+    
+    # Влияние цены
+    price_low = base_price * (1 - variation)
+    price_high = base_price * (1 + variation)
+    profit_price_low = base_volume * (price_low - base_var_cost) - fixed_costs
+    profit_price_high = base_volume * (price_high - base_var_cost) - fixed_costs
+    results.append({
+        'parameter': 'Цена',
+        'low_value': price_low,
+        'high_value': price_high,
+        'profit_low': profit_price_low,
+        'profit_high': profit_price_high,
+        'impact': abs(profit_price_high - profit_price_low)
+    })
+    
+    # Влияние переменных затрат
+    var_cost_low = base_var_cost * (1 - variation)
+    var_cost_high = base_var_cost * (1 + variation)
+    profit_var_low = base_volume * (base_price - var_cost_high) - fixed_costs
+    profit_var_high = base_volume * (base_price - var_cost_low) - fixed_costs
+    results.append({
+        'parameter': 'Перем. затраты',
+        'low_value': var_cost_low,
+        'high_value': var_cost_high,
+        'profit_low': profit_var_low,
+        'profit_high': profit_var_high,
+        'impact': abs(profit_var_high - profit_var_low)
+    })
+    
+    # Влияние спроса/объёма
+    volume_low = base_volume * (1 - variation)
+    volume_high = min(base_volume * (1 + variation), params['wafer_capacity'])
+    profit_vol_low = volume_low * (base_price - base_var_cost) - fixed_costs
+    profit_vol_high = volume_high * (base_price - base_var_cost) - fixed_costs
+    results.append({
+        'parameter': 'Объём продаж',
+        'low_value': volume_low,
+        'high_value': volume_high,
+        'profit_low': profit_vol_low,
+        'profit_high': profit_vol_high,
+        'impact': abs(profit_vol_high - profit_vol_low)
+    })
+    
+    # Влияние постоянных затрат
+    fixed_low = fixed_costs * (1 - variation)
+    fixed_high = fixed_costs * (1 + variation)
+    profit_fixed_low = base_volume * (base_price - base_var_cost) - fixed_high
+    profit_fixed_high = base_volume * (base_price - base_var_cost) - fixed_low
+    results.append({
+        'parameter': 'Пост. затраты',
+        'low_value': fixed_low,
+        'high_value': fixed_high,
+        'profit_low': profit_fixed_low,
+        'profit_high': profit_fixed_high,
+        'impact': abs(profit_fixed_high - profit_fixed_low)
+    })
+    
+    # Сортируем по влиянию
+    results.sort(key=lambda x: x['impact'], reverse=True)
+    
+    return {
+        'base_profit': base_profit,
+        'factors': results,
+        'variation': variation
+    }
+
+
 # ============================================================================
 # ДИНАМИКА ПО ГОДАМ
 # ============================================================================
@@ -418,6 +499,303 @@ def calculate_yearly_dynamics(params):
 
 
 # ============================================================================
+# СРАВНЕНИЕ ПРОДУКТОВЫХ ЛИНИЙ (МАРМЕЛАД vs ВАФЛИ)
+# ============================================================================
+
+def create_wafer_scenarios(params):
+    """Создаёт словарь со всеми параметрами трёх сценариев для вафельной линии."""
+    scenarios = {
+        'Базовый': {
+            'demand': params['wafer_demand_base'],
+            'price': params['wafer_price'] * params['price_adj_base'],
+            'var_cost': params['wafer_var_cost'] * params['cost_adj_base'],
+            'description': 'Умеренный вход на рынок, стабильная конкуренция'
+        },
+        'Оптимистичный': {
+            'demand': params['wafer_demand_opt'],
+            'price': params['wafer_price'] * params['price_adj_opt'],
+            'var_cost': params['wafer_var_cost'] * params['cost_adj_opt'],
+            'description': 'Высокий спрос, рост цен'
+        },
+        'Пессимистичный': {
+            'demand': params['wafer_demand_pess'],
+            'price': params['wafer_price'] * params['price_adj_pess'],
+            'var_cost': params['wafer_var_cost'] * params['cost_adj_pess'],
+            'description': 'Низкий спрос, снижение цен'
+        }
+    }
+    return scenarios
+
+
+def calculate_wafer_indicators(scenarios, params):
+    """Рассчитывает ключевые показатели для каждого сценария вафельной линии."""
+    results = []
+    
+    for name, sc in scenarios.items():
+        volume = min(sc['demand'], params['wafer_capacity'])
+        revenue = volume * sc['price']
+        var_costs = volume * sc['var_cost']
+        gross_profit = revenue - var_costs
+        net_profit = gross_profit - params['wafer_fixed_costs']
+        margin = ((sc['price'] - sc['var_cost']) / sc['price']) * 100
+        
+        results.append({
+            'Сценарий': name,
+            'Спрос (т)': sc['demand'],
+            'Объём выпуска (т)': volume,
+            'Цена (руб./т)': sc['price'],
+            'Перем. затраты (руб./т)': sc['var_cost'],
+            'Выручка (руб.)': revenue,
+            'Перем. затраты общие (руб.)': var_costs,
+            'Валовая прибыль (руб.)': gross_profit,
+            'Постоянные затраты (руб.)': params['wafer_fixed_costs'],
+            'Чистая прибыль (руб.)': net_profit,
+            'Маржинальность (%)': margin
+        })
+    
+    return pd.DataFrame(results)
+
+
+def wafer_monte_carlo_simulation(scenario_params, params, n_simulations=10000):
+    """Выполняет имитационное моделирование методом Монте-Карло для вафельной линии."""
+    np.random.seed(43)  # Другой seed для независимости
+    
+    base_demand = scenario_params['demand']
+    base_price = scenario_params['price']
+    base_var_cost = scenario_params['var_cost']
+    variation = params['mc_variation']
+    
+    demand_low = base_demand * (1 - variation)
+    demand_high = base_demand * (1 + variation)
+    price_low = base_price * (1 - variation)
+    price_high = base_price * (1 + variation)
+    var_cost_low = base_var_cost * (1 - variation)
+    var_cost_high = base_var_cost * (1 + variation)
+    
+    demands = np.random.triangular(demand_low, base_demand, demand_high, n_simulations)
+    prices = np.random.triangular(price_low, base_price, price_high, n_simulations)
+    var_costs = np.random.triangular(var_cost_low, base_var_cost, var_cost_high, n_simulations)
+    
+    volumes = np.minimum(demands, params['wafer_capacity'])
+    revenues = volumes * prices
+    total_var_costs = volumes * var_costs
+    profits = revenues - total_var_costs - params['wafer_fixed_costs']
+    
+    stats = {
+        'mean_profit': np.mean(profits),
+        'std_profit': np.std(profits),
+        'min_profit': np.min(profits),
+        'max_profit': np.max(profits),
+        'median_profit': np.median(profits),
+        'percentile_5': np.percentile(profits, 5),
+        'percentile_95': np.percentile(profits, 95),
+        'prob_loss': np.mean(profits < 0) * 100,
+    }
+    
+    return profits, stats
+
+
+def run_wafer_monte_carlo_all_scenarios(scenarios, params):
+    """Запускает Монте-Карло для всех сценариев вафельной линии."""
+    mc_results = {}
+    for name, sc_params in scenarios.items():
+        profits, stats = wafer_monte_carlo_simulation(sc_params, params, params['mc_simulations'])
+        mc_results[name] = {'profits': profits, 'stats': stats}
+    return mc_results
+
+
+def calculate_wafer_break_even(params):
+    """Рассчитывает точку безубыточности для вафельной линии."""
+    price = params['wafer_price']
+    var_cost = params['wafer_var_cost']
+    fixed_costs = params['wafer_fixed_costs']
+    
+    margin_per_unit = price - var_cost
+    
+    if margin_per_unit > 0:
+        break_even_volume = fixed_costs / margin_per_unit
+    else:
+        break_even_volume = float('inf')
+    
+    break_even_revenue = break_even_volume * price
+    
+    base_volume = min(params['wafer_demand_base'], params['wafer_capacity'])
+    if base_volume > 0:
+        safety_margin = ((base_volume - break_even_volume) / base_volume) * 100
+    else:
+        safety_margin = 0
+    
+    coverage_ratio = (margin_per_unit / price) * 100 if price > 0 else 0
+    
+    return {
+        'break_even_volume': break_even_volume,
+        'break_even_revenue': break_even_revenue,
+        'margin_per_unit': margin_per_unit,
+        'safety_margin': safety_margin,
+        'coverage_ratio': coverage_ratio,
+        'base_volume': base_volume
+    }
+
+
+def calculate_wafer_yearly_dynamics(params):
+    """Рассчитывает динамику показателей по годам для вафельной линии."""
+    np.random.seed(43)
+    
+    years = params['horizon_years']
+    initial_investment = params['wafer_initial_investment']
+    demand_growth = params['demand_growth_rate']
+    inflation = params['inflation_rate']
+    price_growth = params['price_growth_rate']
+    
+    base_demand = params['wafer_demand_base']
+    base_price = params['wafer_price']
+    base_var_cost = params['wafer_var_cost']
+    base_fixed_costs = params['wafer_fixed_costs']
+    capacity = params['wafer_capacity']
+    
+    yearly_data = []
+    cumulative_profit = -initial_investment
+    cumulative_cashflow = -initial_investment
+    payback_year = None
+    
+    demand_noise = np.random.normal(0, 0.08, years)
+    economic_cycle = 0.05 * np.sin(np.linspace(0, 2*np.pi, years)) + np.random.normal(0, 0.02, years)
+    price_pressure = np.random.choice([0, -0.03, -0.05, 0.02], years, p=[0.6, 0.2, 0.1, 0.1])
+    unexpected_costs = np.zeros(years)
+    for i in range(years):
+        if np.random.random() < 0.25:
+            unexpected_costs[i] = base_fixed_costs * np.random.uniform(0.1, 0.3)
+    seasonal_factor = np.random.uniform(0.95, 1.08, years)
+    
+    for year in range(1, years + 1):
+        idx = year - 1
+        
+        trend_demand = base_demand * ((1 + demand_growth) ** idx)
+        trend_price = base_price * ((1 + price_growth) ** idx)
+        trend_var_cost = base_var_cost * ((1 + inflation) ** idx)
+        trend_fixed_costs = base_fixed_costs * ((1 + inflation) ** idx)
+        
+        demand = trend_demand * (1 + demand_noise[idx] + economic_cycle[idx]) * seasonal_factor[idx]
+        demand = max(demand, base_demand * 0.5)
+        
+        price = trend_price * (1 + price_pressure[idx])
+        var_cost = trend_var_cost * (1 + np.random.uniform(-0.02, 0.04))
+        fixed_costs = trend_fixed_costs + unexpected_costs[idx]
+        
+        volume = min(demand, capacity)
+        
+        revenue = volume * price
+        total_var_costs = volume * var_cost
+        gross_profit = revenue - total_var_costs
+        net_profit = gross_profit - fixed_costs
+        
+        cumulative_profit += net_profit
+        cumulative_cashflow += net_profit
+        
+        if payback_year is None and cumulative_cashflow >= 0:
+            payback_year = year
+        
+        yearly_data.append({
+            'year': year,
+            'demand': demand,
+            'volume': volume,
+            'price': price,
+            'var_cost': var_cost,
+            'fixed_costs': fixed_costs,
+            'revenue': revenue,
+            'total_var_costs': total_var_costs,
+            'gross_profit': gross_profit,
+            'net_profit': net_profit,
+            'cumulative_profit': cumulative_profit,
+            'cumulative_cashflow': cumulative_cashflow,
+            'demand_factor': 1 + demand_noise[idx] + economic_cycle[idx],
+            'price_factor': 1 + price_pressure[idx],
+            'unexpected_costs': unexpected_costs[idx]
+        })
+    
+    discount_rate = inflation + 0.05
+    npv = -initial_investment
+    for i, year_data in enumerate(yearly_data):
+        npv += year_data['net_profit'] / ((1 + discount_rate) ** (i + 1))
+    
+    total_profit = sum(y['net_profit'] for y in yearly_data)
+    if initial_investment > 0:
+        simple_roi = (total_profit / initial_investment) * 100
+        avg_annual_roi = simple_roi / years
+    else:
+        simple_roi = 0
+        avg_annual_roi = 0
+    
+    return {
+        'yearly_data': yearly_data,
+        'initial_investment': initial_investment,
+        'total_profit': total_profit,
+        'npv': npv,
+        'discount_rate': discount_rate,
+        'payback_year': payback_year,
+        'simple_roi': simple_roi,
+        'avg_annual_roi': avg_annual_roi
+    }
+
+
+def compare_product_lines(marmalade_df, wafer_df, marmalade_mc, wafer_mc, 
+                          marmalade_be, wafer_be, marmalade_dyn, wafer_dyn, params):
+    """Создаёт сводное сравнение двух продуктовых линий."""
+    
+    # Базовые показатели
+    marm_base = marmalade_df[marmalade_df['Сценарий'] == 'Базовый'].iloc[0]
+    wafer_base = wafer_df[wafer_df['Сценарий'] == 'Базовый'].iloc[0]
+    
+    comparison = {
+        'marmalade': {
+            'name': 'Мармелад',
+            'capacity': params['capacity_new_line'],
+            'investment': params['initial_investment'],
+            'base_profit': marm_base['Чистая прибыль (руб.)'],
+            'base_revenue': marm_base['Выручка (руб.)'],
+            'base_volume': marm_base['Объём выпуска (т)'],
+            'margin': marm_base['Маржинальность (%)'],
+            'break_even': marmalade_be['break_even_volume'],
+            'safety_margin': marmalade_be['safety_margin'],
+            'prob_loss': marmalade_mc['Базовый']['stats']['prob_loss'],
+            'npv': marmalade_dyn['npv'],
+            'roi': marmalade_dyn['simple_roi'],
+            'payback': marmalade_dyn['payback_year'],
+            'mc_mean': marmalade_mc['Базовый']['stats']['mean_profit'],
+            'mc_std': marmalade_mc['Базовый']['stats']['std_profit'],
+        },
+        'wafer': {
+            'name': 'Вафли',
+            'capacity': params['wafer_capacity'],
+            'investment': params['wafer_initial_investment'],
+            'base_profit': wafer_base['Чистая прибыль (руб.)'],
+            'base_revenue': wafer_base['Выручка (руб.)'],
+            'base_volume': wafer_base['Объём выпуска (т)'],
+            'margin': wafer_base['Маржинальность (%)'],
+            'break_even': wafer_be['break_even_volume'],
+            'safety_margin': wafer_be['safety_margin'],
+            'prob_loss': wafer_mc['Базовый']['stats']['prob_loss'],
+            'npv': wafer_dyn['npv'],
+            'roi': wafer_dyn['simple_roi'],
+            'payback': wafer_dyn['payback_year'],
+            'mc_mean': wafer_mc['Базовый']['stats']['mean_profit'],
+            'mc_std': wafer_mc['Базовый']['stats']['std_profit'],
+        }
+    }
+    
+    # Определяем лучший вариант по разным критериям
+    comparison['best'] = {
+        'profit': 'marmalade' if comparison['marmalade']['base_profit'] > comparison['wafer']['base_profit'] else 'wafer',
+        'roi': 'marmalade' if comparison['marmalade']['roi'] > comparison['wafer']['roi'] else 'wafer',
+        'risk': 'marmalade' if comparison['marmalade']['prob_loss'] < comparison['wafer']['prob_loss'] else 'wafer',
+        'npv': 'marmalade' if comparison['marmalade']['npv'] > comparison['wafer']['npv'] else 'wafer',
+        'payback': 'marmalade' if (comparison['marmalade']['payback'] or 999) < (comparison['wafer']['payback'] or 999) else 'wafer',
+    }
+    
+    return comparison
+
+
+# ============================================================================
 # ФУНКЦИИ ПОСТРОЕНИЯ ГРАФИКОВ (возвращают base64)
 # ============================================================================
 
@@ -482,7 +860,7 @@ def plot_scenario_comparison(df, params):
     return fig_to_base64(fig)
 
 
-def plot_monte_carlo_histogram(mc_results, scenario_name='Базовый'):
+def plot_monte_carlo_histogram(mc_results, scenario_name='Базовый', title_prefix=''):
     """Строит гистограмму распределения прибыли."""
     profits = mc_results[scenario_name]['profits'] / 1_000_000
     stats = mc_results[scenario_name]['stats']
@@ -505,7 +883,7 @@ def plot_monte_carlo_histogram(mc_results, scenario_name='Базовый'):
     
     ax.set_xlabel('Чистая прибыль (млн руб.)', fontsize=12)
     ax.set_ylabel('Частота', fontsize=12)
-    ax.set_title(f'Распределение прибыли (Монте-Карло)\nСценарий: {scenario_name}', fontsize=14, fontweight='bold')
+    ax.set_title(f'{title_prefix}Распределение прибыли (Монте-Карло)\nСценарий: {scenario_name}', fontsize=14, fontweight='bold')
     ax.legend(loc='upper right', fontsize=11)
     ax.grid(axis='y', alpha=0.3)
     
@@ -637,7 +1015,7 @@ def plot_break_even(break_even, params):
     return fig_to_base64(fig)
 
 
-def plot_tornado(sensitivity):
+def plot_tornado(sensitivity, title_prefix=''):
     """Строит торнадо-диаграмму анализа чувствительности."""
     fig, ax = plt.subplots(figsize=(12, 6))
     
@@ -663,7 +1041,7 @@ def plot_tornado(sensitivity):
     ax.set_yticks(y_pos)
     ax.set_yticklabels(labels, fontsize=11)
     ax.set_xlabel('Изменение прибыли (млн руб.)', fontsize=12)
-    ax.set_title(f'Анализ чувствительности (±{sensitivity["variation"]*100:.0f}%)\n'
+    ax.set_title(f'{title_prefix}Анализ чувствительности (±{sensitivity["variation"]*100:.0f}%)\n'
                 f'Базовая прибыль: {base_profit:.2f} млн руб.', fontsize=14, fontweight='bold')
     ax.grid(axis='x', alpha=0.3)
     
@@ -805,21 +1183,252 @@ def plot_yearly_dynamics(dynamics):
 
 
 # ============================================================================
+# ГРАФИКИ СРАВНЕНИЯ ПРОДУКТОВЫХ ЛИНИЙ
+# ============================================================================
+
+def plot_lines_profit_comparison(comparison):
+    """Строит сравнительную диаграмму прибыли и выручки двух линий."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    
+    products = ['Мармелад', 'Вафли']
+    x = np.arange(len(products))
+    width = 0.35
+    
+    # График 1: Прибыль по сценариям
+    ax1 = axes[0]
+    profits = [comparison['marmalade']['base_profit'] / 1e6, 
+               comparison['wafer']['base_profit'] / 1e6]
+    colors = ['#3498db', '#e67e22']
+    bars = ax1.bar(products, profits, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
+    
+    ax1.axhline(0, color='black', linewidth=1)
+    ax1.set_ylabel('Чистая прибыль (млн руб.)', fontsize=12)
+    ax1.set_title('Сравнение прибыли (базовый сценарий)', fontsize=14, fontweight='bold')
+    ax1.grid(axis='y', alpha=0.3)
+    
+    for bar, profit in zip(bars, profits):
+        height = bar.get_height()
+        va = 'bottom' if height >= 0 else 'top'
+        offset = 5 if height >= 0 else -15
+        color = '#27ae60' if height >= 0 else '#c0392b'
+        ax1.annotate(f'{profit:.2f} млн', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, offset), textcoords="offset points", ha='center', va=va,
+                    fontsize=12, fontweight='bold', color=color)
+    
+    # График 2: Инвестиции vs NPV
+    ax2 = axes[1]
+    investments = [comparison['marmalade']['investment'] / 1e6, 
+                   comparison['wafer']['investment'] / 1e6]
+    npvs = [comparison['marmalade']['npv'] / 1e6, 
+            comparison['wafer']['npv'] / 1e6]
+    
+    x_pos = np.arange(len(products))
+    bars1 = ax2.bar(x_pos - width/2, investments, width, label='Инвестиции', color='#e74c3c', alpha=0.8)
+    bars2 = ax2.bar(x_pos + width/2, npvs, width, label='NPV', color='#2ecc71', alpha=0.8)
+    
+    ax2.set_ylabel('Сумма (млн руб.)', fontsize=12)
+    ax2.set_title('Инвестиции vs NPV', fontsize=14, fontweight='bold')
+    ax2.set_xticks(x_pos)
+    ax2.set_xticklabels(products)
+    ax2.legend()
+    ax2.grid(axis='y', alpha=0.3)
+    ax2.axhline(0, color='black', linewidth=1)
+    
+    for bars in [bars1, bars2]:
+        for bar in bars:
+            height = bar.get_height()
+            if abs(height) > 0.1:
+                ax2.annotate(f'{height:.1f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3 if height >= 0 else -12), textcoords="offset points",
+                            ha='center', fontsize=10, fontweight='bold')
+    
+    plt.tight_layout()
+    return fig_to_base64(fig)
+
+
+def plot_lines_risk_comparison(comparison, marmalade_mc, wafer_mc):
+    """Строит сравнительную диаграмму рисков двух линий."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    
+    # График 1: Вероятность убытка по сценариям
+    ax1 = axes[0]
+    scenarios = ['Базовый', 'Оптимистичный', 'Пессимистичный']
+    x = np.arange(len(scenarios))
+    width = 0.35
+    
+    marm_probs = [marmalade_mc[s]['stats']['prob_loss'] for s in scenarios]
+    wafer_probs = [wafer_mc[s]['stats']['prob_loss'] for s in scenarios]
+    
+    bars1 = ax1.bar(x - width/2, marm_probs, width, label='Мармелад', color='#3498db', alpha=0.8)
+    bars2 = ax1.bar(x + width/2, wafer_probs, width, label='Вафли', color='#e67e22', alpha=0.8)
+    
+    ax1.set_ylabel('Вероятность убытка (%)', fontsize=12)
+    ax1.set_title('Сравнение рисков по сценариям', fontsize=14, fontweight='bold')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(scenarios)
+    ax1.legend()
+    ax1.grid(axis='y', alpha=0.3)
+    
+    # Зона высокого риска
+    ax1.axhspan(30, ax1.get_ylim()[1] if ax1.get_ylim()[1] > 30 else 100, 
+                alpha=0.1, color='red', label='Высокий риск')
+    
+    for bars in [bars1, bars2]:
+        for bar in bars:
+            height = bar.get_height()
+            ax1.annotate(f'{height:.1f}%', xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3), textcoords="offset points", ha='center', fontsize=9)
+    
+    # График 2: Boxplot распределения прибыли
+    ax2 = axes[1]
+    data = [
+        marmalade_mc['Базовый']['profits'] / 1e6,
+        wafer_mc['Базовый']['profits'] / 1e6
+    ]
+    labels = ['Мармелад', 'Вафли']
+    
+    bp = ax2.boxplot(data, labels=labels, patch_artist=True)
+    colors = ['#3498db', '#e67e22']
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+    
+    ax2.axhline(0, color='black', linestyle='--', linewidth=1.5, label='Точка безубыточности')
+    ax2.set_ylabel('Чистая прибыль (млн руб.)', fontsize=12)
+    ax2.set_title('Распределение прибыли (Монте-Карло)', fontsize=14, fontweight='bold')
+    ax2.grid(axis='y', alpha=0.3)
+    ax2.legend()
+    
+    plt.tight_layout()
+    return fig_to_base64(fig)
+
+
+def plot_lines_roi_comparison(comparison, marmalade_dyn, wafer_dyn):
+    """Строит сравнительную диаграмму ROI и окупаемости."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    
+    products = ['Мармелад', 'Вафли']
+    colors = ['#3498db', '#e67e22']
+    
+    # График 1: ROI и маржинальность
+    ax1 = axes[0]
+    x = np.arange(len(products))
+    width = 0.35
+    
+    roi = [comparison['marmalade']['roi'], comparison['wafer']['roi']]
+    margin = [comparison['marmalade']['margin'], comparison['wafer']['margin']]
+    
+    bars1 = ax1.bar(x - width/2, roi, width, label='ROI (%)', color='#2ecc71', alpha=0.8)
+    bars2 = ax1.bar(x + width/2, margin, width, label='Маржинальность (%)', color='#9b59b6', alpha=0.8)
+    
+    ax1.set_ylabel('Процент (%)', fontsize=12)
+    ax1.set_title('ROI и маржинальность', fontsize=14, fontweight='bold')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(products)
+    ax1.legend()
+    ax1.grid(axis='y', alpha=0.3)
+    
+    for bars in [bars1, bars2]:
+        for bar in bars:
+            height = bar.get_height()
+            ax1.annotate(f'{height:.1f}%', xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3), textcoords="offset points", ha='center', fontsize=10, fontweight='bold')
+    
+    # График 2: Накопленный денежный поток
+    ax2 = axes[1]
+    years = [0] + [d['year'] for d in marmalade_dyn['yearly_data']]
+    
+    marm_cf = [-marmalade_dyn['initial_investment'] / 1e6] + \
+              [d['cumulative_cashflow'] / 1e6 for d in marmalade_dyn['yearly_data']]
+    wafer_cf = [-wafer_dyn['initial_investment'] / 1e6] + \
+               [d['cumulative_cashflow'] / 1e6 for d in wafer_dyn['yearly_data']]
+    
+    ax2.plot(years, marm_cf, 'o-', color='#3498db', linewidth=2.5, markersize=8, label='Мармелад')
+    ax2.plot(years, wafer_cf, 's-', color='#e67e22', linewidth=2.5, markersize=8, label='Вафли')
+    
+    ax2.axhline(0, color='black', linestyle='--', linewidth=1.5)
+    ax2.fill_between(years, marm_cf, 0, where=[c >= 0 for c in marm_cf], color='#3498db', alpha=0.1)
+    ax2.fill_between(years, wafer_cf, 0, where=[c >= 0 for c in wafer_cf], color='#e67e22', alpha=0.1)
+    
+    # Отметка окупаемости
+    if marmalade_dyn['payback_year']:
+        ax2.axvline(marmalade_dyn['payback_year'], color='#3498db', linestyle=':', alpha=0.7)
+    if wafer_dyn['payback_year']:
+        ax2.axvline(wafer_dyn['payback_year'], color='#e67e22', linestyle=':', alpha=0.7)
+    
+    ax2.set_xlabel('Год', fontsize=12)
+    ax2.set_ylabel('Накопленный CF (млн руб.)', fontsize=12)
+    ax2.set_title('Динамика окупаемости', fontsize=14, fontweight='bold')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xticks(years)
+    
+    plt.tight_layout()
+    return fig_to_base64(fig)
+
+
+def plot_lines_break_even_comparison(marmalade_be, wafer_be, params):
+    """Строит сравнительный график точек безубыточности."""
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    # Диапазон объёмов (общий для обеих линий)
+    max_volume = max(params['capacity_new_line'], params['wafer_capacity']) * 1.2
+    volumes = np.linspace(0, max_volume, 100)
+    
+    # Мармелад
+    marm_revenues = volumes * params['price_new']
+    marm_costs = volumes * params['var_cost_new'] + params['fixed_costs']
+    
+    # Вафли  
+    wafer_revenues = volumes * params['wafer_price']
+    wafer_costs = volumes * params['wafer_var_cost'] + params['wafer_fixed_costs']
+    
+    # Линии мармелада
+    ax.plot(volumes, marm_revenues / 1e6, 'b-', linewidth=2, label='Выручка (мармелад)')
+    ax.plot(volumes, marm_costs / 1e6, 'b--', linewidth=2, label='Затраты (мармелад)', alpha=0.7)
+    
+    # Линии вафель
+    ax.plot(volumes, wafer_revenues / 1e6, color='#e67e22', linestyle='-', linewidth=2, label='Выручка (вафли)')
+    ax.plot(volumes, wafer_costs / 1e6, color='#e67e22', linestyle='--', linewidth=2, label='Затраты (вафли)', alpha=0.7)
+    
+    # Точки безубыточности
+    ax.plot(marmalade_be['break_even_volume'], marmalade_be['break_even_revenue'] / 1e6, 
+            'bo', markersize=15, zorder=5, label=f'ТБ мармелад: {marmalade_be["break_even_volume"]:.0f} т')
+    ax.plot(wafer_be['break_even_volume'], wafer_be['break_even_revenue'] / 1e6, 
+            'o', color='#e67e22', markersize=15, zorder=5, label=f'ТБ вафли: {wafer_be["break_even_volume"]:.0f} т')
+    
+    # Мощности
+    ax.axvline(params['capacity_new_line'], color='#3498db', linestyle=':', linewidth=2, alpha=0.5)
+    ax.axvline(params['wafer_capacity'], color='#e67e22', linestyle=':', linewidth=2, alpha=0.5)
+    
+    ax.set_xlabel('Объём продаж (тонн)', fontsize=12)
+    ax.set_ylabel('Сумма (млн руб.)', fontsize=12)
+    ax.set_title('Сравнение точек безубыточности', fontsize=14, fontweight='bold')
+    ax.legend(loc='upper left', fontsize=9)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0, max_volume)
+    ax.set_ylim(0, None)
+    
+    plt.tight_layout()
+    return fig_to_base64(fig)
+
+
+# ============================================================================
 # МАРШРУТЫ FLASK
 # ============================================================================
 
 def get_default_params():
     """Возвращает параметры по умолчанию."""
     return {
-        # Конкурент
+        # Конкурент (мармелад)
         'competitor_capacity': 3924,
         'competitor_output': 2624,
-        # Коммунарка
+        # Коммунарка - линия мармелада
         'capacity_new_line': 1000,
         'price_new': 8000,
         'var_cost_new': 4800,
         'fixed_costs': 500000,
-        # Сценарии спроса
+        # Сценарии спроса (мармелад)
         'demand_base': 600,
         'demand_opt': 900,
         'demand_pess': 350,
@@ -834,25 +1443,42 @@ def get_default_params():
         # Монте-Карло
         'mc_variation': 0.30,
         'mc_simulations': 50000,
-        # Динамика по годам
+        # Динамика по годам (мармелад)
         'horizon_years': 5,
         'initial_investment': 36_000_000,  # Инвестиции в линию (нижние границы)
         'demand_growth_rate': 0.05,        # Рост спроса 5% в год
         'inflation_rate': 0.072,           # Инфляция 7.2%
         'price_growth_rate': 0.072,        # Рост цены (соразмерно инфляции)
+        
+        # === ВАФЕЛЬНАЯ ЛИНИЯ ===
+        # Производственные параметры
+        'wafer_capacity': 800,             # Мощность линии (т/год)
+        'wafer_price': 6200,               # Отпускная цена (руб./т)
+        'wafer_var_cost': 4600,            # Переменные затраты (руб./т)
+        'wafer_fixed_costs': 430000,       # Постоянные затраты (руб./год)
+        # Сценарии спроса (вафли)
+        'wafer_demand_base': 500,          # 62.5% от мощности
+        'wafer_demand_opt': 650,           # 81.3% от мощности
+        'wafer_demand_pess': 350,          # 43.8% от мощности
+        # Инвестиции (вафли)
+        'wafer_initial_investment': 20_000_000,  # Инвестиции в реконструкцию
     }
 
 
 def get_params_from_form(form):
     """Извлекает параметры из формы."""
     params = get_default_params()
+    int_keys = ['competitor_capacity', 'competitor_output', 'capacity_new_line', 
+                'demand_base', 'demand_opt', 'demand_pess', 'mc_simulations',
+                'horizon_years', 'initial_investment',
+                # Вафельная линия
+                'wafer_capacity', 'wafer_demand_base', 'wafer_demand_opt', 
+                'wafer_demand_pess', 'wafer_initial_investment']
     for key in params:
         if key in form:
             try:
                 params[key] = float(form[key])
-                if key in ['competitor_capacity', 'competitor_output', 'capacity_new_line', 
-                           'demand_base', 'demand_opt', 'demand_pess', 'mc_simulations',
-                           'horizon_years', 'initial_investment']:
+                if key in int_keys:
                     params[key] = int(params[key])
             except ValueError:
                 pass
@@ -903,18 +1529,30 @@ def index():
     else:
         params = get_default_params()
     
-    # Расчёты
+    # === РАСЧЁТЫ ДЛЯ МАРМЕЛАДА ===
     scenarios = create_scenarios(params)
     df = calculate_indicators(scenarios, params)
     mc_results = run_monte_carlo_all_scenarios(scenarios, params)
     opt_results = run_optimization_all_scenarios(scenarios, params)
-    
-    # Новые расчёты
     break_even = calculate_break_even(params)
     sensitivity = sensitivity_analysis(params)
+    wafer_sensitivity = wafer_sensitivity_analysis(params)
     dynamics = calculate_yearly_dynamics(params)
     
-    # Графики
+    # === РАСЧЁТЫ ДЛЯ ВАФЕЛЬНОЙ ЛИНИИ ===
+    wafer_scenarios = create_wafer_scenarios(params)
+    wafer_df = calculate_wafer_indicators(wafer_scenarios, params)
+    wafer_mc_results = run_wafer_monte_carlo_all_scenarios(wafer_scenarios, params)
+    wafer_break_even = calculate_wafer_break_even(params)
+    wafer_dynamics = calculate_wafer_yearly_dynamics(params)
+    
+    # === СРАВНЕНИЕ ЛИНИЙ ===
+    lines_comparison = compare_product_lines(
+        df, wafer_df, mc_results, wafer_mc_results,
+        break_even, wafer_break_even, dynamics, wafer_dynamics, params
+    )
+    
+    # === ГРАФИКИ МАРМЕЛАДА ===
     chart_comparison = plot_scenario_comparison(df, params)
     chart_mc_base = plot_monte_carlo_histogram(mc_results, 'Базовый')
     chart_mc_opt = plot_monte_carlo_histogram(mc_results, 'Оптимистичный')
@@ -923,7 +1561,19 @@ def index():
     chart_mc_comparison = plot_all_monte_carlo(mc_results)
     chart_break_even = plot_break_even(break_even, params)
     chart_tornado = plot_tornado(sensitivity)
+    chart_wafer_tornado = plot_tornado(wafer_sensitivity, title_prefix='Вафли: ')
     chart_dynamics = plot_yearly_dynamics(dynamics)
+    
+    # === ГРАФИКИ ВАФЕЛЬНОЙ ЛИНИИ ===
+    chart_wafer_mc_base = plot_monte_carlo_histogram(wafer_mc_results, 'Базовый', title_prefix='Вафли: ')
+    chart_wafer_mc_opt = plot_monte_carlo_histogram(wafer_mc_results, 'Оптимистичный', title_prefix='Вафли: ')
+    chart_wafer_mc_pess = plot_monte_carlo_histogram(wafer_mc_results, 'Пессимистичный', title_prefix='Вафли: ')
+    
+    # === ГРАФИКИ СРАВНЕНИЯ ЛИНИЙ ===
+    chart_lines_profit = plot_lines_profit_comparison(lines_comparison)
+    chart_lines_risk = plot_lines_risk_comparison(lines_comparison, mc_results, wafer_mc_results)
+    chart_lines_roi = plot_lines_roi_comparison(lines_comparison, dynamics, wafer_dynamics)
+    chart_lines_break_even = plot_lines_break_even_comparison(break_even, wafer_break_even, params)
     
     # Рекомендация
     recommendation = generate_recommendation(df, mc_results, params)
@@ -955,8 +1605,35 @@ def index():
             'prob_loss': f"{stats['prob_loss']:.1f}%"
         })
     
+    # Форматирование таблицы вафельной линии
+    wafer_df_display = wafer_df.copy()
+    wafer_df_display['Цена (руб./т)'] = wafer_df_display['Цена (руб./т)'].apply(lambda x: f'{x:,.0f}')
+    wafer_df_display['Перем. затраты (руб./т)'] = wafer_df_display['Перем. затраты (руб./т)'].apply(lambda x: f'{x:,.0f}')
+    wafer_df_display['Выручка (руб.)'] = wafer_df_display['Выручка (руб.)'].apply(lambda x: f'{x:,.0f}')
+    wafer_df_display['Перем. затраты общие (руб.)'] = wafer_df_display['Перем. затраты общие (руб.)'].apply(lambda x: f'{x:,.0f}')
+    wafer_df_display['Валовая прибыль (руб.)'] = wafer_df_display['Валовая прибыль (руб.)'].apply(lambda x: f'{x:,.0f}')
+    wafer_df_display['Постоянные затраты (руб.)'] = wafer_df_display['Постоянные затраты (руб.)'].apply(lambda x: f'{x:,.0f}')
+    wafer_df_display['Чистая прибыль (руб.)'] = wafer_df_display['Чистая прибыль (руб.)'].apply(lambda x: f'{x:,.0f}')
+    wafer_df_display['Маржинальность (%)'] = wafer_df_display['Маржинальность (%)'].apply(lambda x: f'{x:.1f}%')
+    
+    # MC статистика для вафельной линии
+    wafer_mc_stats_table = []
+    for name in ['Базовый', 'Оптимистичный', 'Пессимистичный']:
+        stats = wafer_mc_results[name]['stats']
+        wafer_mc_stats_table.append({
+            'scenario': name,
+            'mean': f"{stats['mean_profit']/1e6:.2f} млн",
+            'std': f"{stats['std_profit']/1e6:.2f} млн",
+            'min': f"{stats['min_profit']/1e6:.2f} млн",
+            'max': f"{stats['max_profit']/1e6:.2f} млн",
+            'p5': f"{stats['percentile_5']/1e6:.2f} млн",
+            'p95': f"{stats['percentile_95']/1e6:.2f} млн",
+            'prob_loss': f"{stats['prob_loss']:.1f}%"
+        })
+    
     return render_template('index.html',
                           params=params,
+                          # Мармелад
                           df=df_display.to_dict('records'),
                           df_columns=df_display.columns.tolist(),
                           opt_results=opt_results,
@@ -964,7 +1641,17 @@ def index():
                           recommendation=recommendation,
                           break_even=break_even,
                           sensitivity=sensitivity,
+                          wafer_sensitivity=wafer_sensitivity,
                           dynamics=dynamics,
+                          # Вафли
+                          wafer_df=wafer_df_display.to_dict('records'),
+                          wafer_df_columns=wafer_df_display.columns.tolist(),
+                          wafer_mc_stats=wafer_mc_stats_table,
+                          wafer_break_even=wafer_break_even,
+                          wafer_dynamics=wafer_dynamics,
+                          # Сравнение линий
+                          lines_comparison=lines_comparison,
+                          # Графики мармелада
                           chart_comparison=chart_comparison,
                           chart_mc_base=chart_mc_base,
                           chart_mc_opt=chart_mc_opt,
@@ -973,7 +1660,17 @@ def index():
                           chart_mc_comparison=chart_mc_comparison,
                           chart_break_even=chart_break_even,
                           chart_tornado=chart_tornado,
-                          chart_dynamics=chart_dynamics)
+                          chart_wafer_tornado=chart_wafer_tornado,
+                          chart_dynamics=chart_dynamics,
+                          # Графики Монте-Карло для вафель
+                          chart_wafer_mc_base=chart_wafer_mc_base,
+                          chart_wafer_mc_opt=chart_wafer_mc_opt,
+                          chart_wafer_mc_pess=chart_wafer_mc_pess,
+                          # Графики сравнения линий
+                          chart_lines_profit=chart_lines_profit,
+                          chart_lines_risk=chart_lines_risk,
+                          chart_lines_roi=chart_lines_roi,
+                          chart_lines_break_even=chart_lines_break_even)
 
 
 if __name__ == '__main__':
