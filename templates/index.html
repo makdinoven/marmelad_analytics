@@ -813,6 +813,7 @@
             </button>
             <div class="nav-links">
                 <a href="#lines-comparison" class="nav-link">Сравнение</a>
+                <a href="#import-competition" class="nav-link">Импорт</a>
                 <a href="#scenarios" class="nav-link">Показатели</a>
                 <a href="#monte-carlo" class="nav-link">Монте-Карло</a>
                 <a href="#break-even" class="nav-link">Безубыточность</a>
@@ -1135,6 +1136,96 @@
                     </div>
                     <div id="compare-be" class="tab-content">
                         <img class="chart-img" src="data:image/png;base64,{{ chart_lines_break_even }}" alt="Сравнение безубыточности" onclick="openImageModal(this)" style="max-height: 350px;">
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- ИМПОРТНАЯ КОНКУРЕНЦИЯ -->
+                <!-- ============================================ -->
+                <h2 id="import-competition" class="section-title">🌍 Конкуренция со стороны зарубежных производителей</h2>
+
+                <div class="info-box">
+                    <strong>Импорт занимает ~{{ "%.0f"|format(import_data.import_share) }}% рынка мармелада Беларуси</strong> (~{{ "%.0f"|format(import_data.import_volume) }} т из {{ "%.0f"|format(import_data.total_market) }} т).
+                    Средняя цена импортной продукции — <strong>{{ "%.1f"|format(import_data.import_avg_kg) }} BYN/кг</strong>,
+                    отечественной — <strong>{{ "%.1f"|format(import_data.domestic_avg_kg) }} BYN/кг</strong>
+                    (импорт дороже в <strong>{{ "%.1f"|format(import_data.import_domestic_ratio) }}×</strong>).
+                    Планируемая оптовая цена Коммунарки — <strong>{{ "%.1f"|format(import_data.kommunarka_price_kg) }} BYN/кг</strong>,
+                    что ниже среднего уровня по отечественным производителям — ценовое преимущество перед импортом составляет <strong>{{ "%.1f"|format(import_data.price_advantage) }}×</strong>.
+                </div>
+
+                <!-- Сводная таблица ценового позиционирования -->
+                <div class="card">
+                    <h3 class="card-title"><span class="icon">💰</span> Ценовое позиционирование</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Производитель</th>
+                                    <th>Сегмент</th>
+                                    <th>Цена (BYN/кг)</th>
+                                    <th>Отношение к Коммунарке</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for brand in import_data.price_brands %}
+                                <tr class="{% if brand.type == 'kommunarka' %}scenario-base{% elif brand.type == 'domestic' %}scenario-opt{% else %}scenario-pess{% endif %}">
+                                    <td>{{ brand.brand | replace('\n', ' ') }}</td>
+                                    <td>{% if brand.type == 'kommunarka' %}🍬 Коммунарка{% elif brand.type == 'domestic' %}🇧🇾 Отечественный{% else %}🌍 Импорт{% endif %}</td>
+                                    <td><strong>{{ "%.2f"|format(brand.price) }}</strong></td>
+                                    <td>{% if brand.type == 'kommunarka' %}—{% else %}× {{ "%.1f"|format(brand.price / import_data.kommunarka_price_kg) }}{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr style="background: rgba(67,97,238,0.05); font-style: italic;">
+                                    <td>Средняя (отечественные)</td>
+                                    <td>🇧🇾 Отечественный</td>
+                                    <td><strong>{{ "%.1f"|format(import_data.domestic_avg_kg) }}</strong></td>
+                                    <td>× {{ "%.1f"|format(import_data.domestic_avg_kg / import_data.kommunarka_price_kg) }}</td>
+                                </tr>
+                                <tr style="background: rgba(231,76,60,0.05); font-style: italic;">
+                                    <td>Средняя (импорт)</td>
+                                    <td>🌍 Импорт</td>
+                                    <td><strong>{{ "%.1f"|format(import_data.import_avg_kg) }}</strong></td>
+                                    <td>× {{ "%.1f"|format(import_data.price_advantage) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Таблица рынка кондитерских изделий -->
+                <div class="card">
+                    <h3 class="card-title"><span class="icon">📋</span> Таблица 3.4 — Рынок сахаристых кондитерских изделий Беларуси</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Год</th>
+                                    <th>Отечественная продукция (т)</th>
+                                    <th>Импорт (т)</th>
+                                    <th>Всего (т)</th>
+                                    <th>Доля импорта (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in import_data.confectionery_data %}
+                                <tr>
+                                    <td><strong>{{ row.year }}</strong></td>
+                                    <td>{{ "{:,.1f}".format(row.domestic) }}</td>
+                                    <td>{{ "{:,.1f}".format(row.import_vol) }}</td>
+                                    <td>{{ "{:,.1f}".format(row.total) }}</td>
+                                    <td>{{ "%.1f"|format(row.import_vol / row.total * 100) }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- График импортной конкуренции -->
+                <div class="card">
+                    <h3 class="card-title"><span class="icon">📊</span> Визуальный анализ: цены, структура рынка, динамика</h3>
+                    <div class="chart-container">
+                        <img class="chart-img" src="data:image/png;base64,{{ chart_import }}" alt="Анализ импортной конкуренции" onclick="openImageModal(this)">
                     </div>
                 </div>
 

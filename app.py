@@ -44,7 +44,7 @@ def create_scenarios(params):
             'demand': params['demand_pess'],
             'price': params['price_new'] * params['price_adj_pess'],
             'var_cost': params['var_cost_new'] * params['cost_adj_pess'],
-            'description': 'Низкий спрос, агрессивная конкуренция, снижение цен'
+            'description': 'Низкий спрос, агрессивная конкуренция, давление импорта, снижение цен'
         }
     }
     return scenarios
@@ -60,7 +60,7 @@ def calculate_indicators(scenarios, params):
         var_costs = volume * sc['var_cost']
         gross_profit = revenue - var_costs
         net_profit = gross_profit - params['fixed_costs']
-        total_market = params['competitor_output'] + volume
+        total_market = params['competitor_output'] + params.get('import_volume', 4600) + volume
         market_share = (volume / total_market) * 100
         margin = ((sc['price'] - sc['var_cost']) / sc['price']) * 100
         
@@ -403,14 +403,22 @@ def calculate_yearly_dynamics(params):
     
     # 3. Конкурентное давление (случайные годы с ценовой войной)
     price_pressure = np.random.choice([0, -0.03, -0.05, 0.02], years, p=[0.6, 0.2, 0.1, 0.1])
-    
+
+    # 3а. Давление импорта: импорт растёт → ценовое давление на отечественных производителей
+    import_growth = params.get('import_growth_rate', 0.02)
+    import_share_0 = params.get('import_volume', 4600) / params.get('total_marmalade_market', 9800)
+    # Каждый год доля импорта чуть растёт → дополнительное снижение цены ~0.5× delta_import_share
+    import_price_pressure = np.array(
+        [-0.5 * import_growth * import_share_0 * i for i in range(years)]
+    )
+
     # 4. Непредвиденные расходы (ремонт, модернизация, штрафы)
     unexpected_costs = np.zeros(years)
     # В случайные годы добавляем непредвиденные расходы
     for i in range(years):
         if np.random.random() < 0.25:  # 25% шанс каждый год
             unexpected_costs[i] = base_fixed_costs * np.random.uniform(0.1, 0.3)
-    
+
     # 5. Сезонный фактор (некоторые годы лучше/хуже)
     seasonal_factor = np.random.uniform(0.95, 1.08, years)
     
@@ -428,22 +436,22 @@ def calculate_yearly_dynamics(params):
         demand = trend_demand * (1 + demand_noise[idx] + economic_cycle[idx]) * seasonal_factor[idx]
         demand = max(demand, base_demand * 0.5)  # Минимум 50% от базового
         
-        # Цена: тренд + конкурентное давление
-        price = trend_price * (1 + price_pressure[idx])
-        
+        # Цена: тренд + конкурентное давление + давление импорта
+        price = trend_price * (1 + price_pressure[idx] + import_price_pressure[idx])
+
         # Затраты: тренд + небольшая волатильность
         var_cost = trend_var_cost * (1 + np.random.uniform(-0.02, 0.04))
         fixed_costs = trend_fixed_costs + unexpected_costs[idx]
-        
+
         # Объём ограничен мощностью
         volume = min(demand, capacity)
-        
+
         # Финансовые показатели
         revenue = volume * price
         total_var_costs = volume * var_cost
         gross_profit = revenue - total_var_costs
         net_profit = gross_profit - fixed_costs
-        
+
         # Накопленные показатели
         cumulative_profit += net_profit
         cumulative_cashflow += net_profit
@@ -901,32 +909,44 @@ def plot_monte_carlo_histogram(mc_results, scenario_name='Базовый', title
     return fig_to_base64(fig)
 
 
-def plot_market_share(df):
-    """Строит диаграмму долей рынка."""
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
+def plot_market_share(df, params):
+    """Строит диаграмму долей рынка (с учётом импорта)."""
+    fig, ax = plt.subplots(figsize=(11, 6))
+
     scenarios = df['Сценарий'].tolist()
-    kommunarka_share = df['Доля рынка (%)'].values
-    competitor_share = 100 - kommunarka_share
-    
+    import_volume = params.get('import_volume', 4600)
+    competitor_output = params.get('competitor_output', 2624)
+
+    import_shares, competitor_shares, kommunarka_shares = [], [], []
+    for _, row in df.iterrows():
+        volume = row['Объём выпуска (т)']
+        total = competitor_output + import_volume + volume
+        import_shares.append(import_volume / total * 100)
+        competitor_shares.append(competitor_output / total * 100)
+        kommunarka_shares.append(volume / total * 100)
+
     x = np.arange(len(scenarios))
     width = 0.6
-    
-    ax.bar(x, competitor_share, width, label='Красный пищевик', color='#e74c3c', alpha=0.8)
-    ax.bar(x, kommunarka_share, width, bottom=competitor_share, label='Коммунарка', color='#3498db', alpha=0.8)
-    
-    for i, (k, c) in enumerate(zip(kommunarka_share, competitor_share)):
-        ax.text(i, c + k/2, f'{k:.1f}%', ha='center', va='center', fontsize=11, fontweight='bold', color='white')
-        ax.text(i, c/2, f'{c:.1f}%', ha='center', va='center', fontsize=11, fontweight='bold', color='white')
-    
+
+    ax.bar(x, import_shares, width, label='Импорт', color='#e67e22', alpha=0.85)
+    ax.bar(x, competitor_shares, width, bottom=import_shares, label='Красный пищевик', color='#e74c3c', alpha=0.85)
+    bottom_total = [a + b for a, b in zip(import_shares, competitor_shares)]
+    ax.bar(x, kommunarka_shares, width, bottom=bottom_total, label='Коммунарка', color='#3498db', alpha=0.85)
+
+    for i, (k, c, imp) in enumerate(zip(kommunarka_shares, competitor_shares, import_shares)):
+        bot = imp + c
+        ax.text(i, bot + k / 2, f'{k:.1f}%', ha='center', va='center', fontsize=10, fontweight='bold', color='white')
+        ax.text(i, imp + c / 2, f'{c:.1f}%', ha='center', va='center', fontsize=10, fontweight='bold', color='white')
+        ax.text(i, imp / 2, f'{imp:.1f}%', ha='center', va='center', fontsize=10, fontweight='bold', color='white')
+
     ax.set_xlabel('Сценарий', fontsize=12)
     ax.set_ylabel('Доля рынка (%)', fontsize=12)
-    ax.set_title('Распределение долей рынка мармелада', fontsize=14, fontweight='bold')
+    ax.set_title('Распределение долей рынка мармелада\n(с учётом импорта ~47%)', fontsize=14, fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(scenarios)
     ax.legend(loc='upper right')
-    ax.set_ylim(0, 105)
-    
+    ax.set_ylim(0, 108)
+
     plt.tight_layout()
     return fig_to_base64(fig)
 
@@ -1414,6 +1434,129 @@ def plot_lines_break_even_comparison(marmalade_be, wafer_be, params):
 
 
 # ============================================================================
+# АНАЛИЗ ИМПОРТНОЙ КОНКУРЕНЦИИ
+# ============================================================================
+
+def calculate_import_competition(params):
+    """Рассчитывает показатели конкуренции со стороны зарубежных производителей."""
+    kommunarka_price_kg = params['price_new'] / 1000
+    domestic_avg_kg = params.get('domestic_avg_price', 16300) / 1000
+    import_avg_kg = params.get('import_avg_price', 36400) / 1000
+
+    import_volume = params.get('import_volume', 4600)
+    domestic_total = params.get('domestic_total', 5200)
+    total_market = params.get('total_marmalade_market', 9800)
+
+    import_share = import_volume / total_market * 100
+    domestic_share = 100 - import_share
+
+    return {
+        'kommunarka_price_kg': kommunarka_price_kg,
+        'domestic_avg_kg': domestic_avg_kg,
+        'import_avg_kg': import_avg_kg,
+        'price_advantage': import_avg_kg / kommunarka_price_kg,
+        'import_domestic_ratio': import_avg_kg / domestic_avg_kg,
+        'import_share': import_share,
+        'domestic_share': domestic_share,
+        'import_volume': import_volume,
+        'domestic_total': domestic_total,
+        'total_market': total_market,
+        # Данные по ценам конкретных брендов (розница, BYN/кг)
+        'price_brands': [
+            {'brand': 'Коммунарка\n(план, опт)', 'price': kommunarka_price_kg, 'type': 'kommunarka'},
+            {'brand': 'Красный пищевик\nДольки',  'price': 12.57, 'type': 'domestic'},
+            {'brand': 'Красный пищевик\nTinki',   'price': 25.20, 'type': 'domestic'},
+            {'brand': 'Бон Пари\nзмейки',          'price': 30.53, 'type': 'import'},
+            {'brand': 'Haribo\nHappy Cola',         'price': 68.38, 'type': 'import'},
+        ],
+        # Динамика рынка кондитерских изделий Беларуси (сахаристые, тонн)
+        'confectionery_data': [
+            {'year': 2022, 'domestic': 31408.3, 'import_vol': 28183.2, 'total': 59591.5},
+            {'year': 2023, 'domestic': 44849.0, 'import_vol': 40212.7, 'total': 85061.7},
+            {'year': 2024, 'domestic': 45109.9, 'import_vol': 40337.1, 'total': 85447.0},
+        ],
+    }
+
+
+def plot_import_competition(import_data):
+    """Строит три графика анализа импортной конкуренции."""
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    # --- График 1: Ценовое позиционирование по брендам ---
+    ax1 = axes[0]
+    brands = [d['brand'] for d in import_data['price_brands']]
+    prices = [d['price'] for d in import_data['price_brands']]
+    type_colors = {'kommunarka': '#3498db', 'domestic': '#2ecc71', 'import': '#e74c3c'}
+    bar_colors = [type_colors[d['type']] for d in import_data['price_brands']]
+
+    bars = ax1.bar(range(len(brands)), prices, color=bar_colors, alpha=0.85,
+                   edgecolor='black', linewidth=1.0)
+    ax1.set_xticks(range(len(brands)))
+    ax1.set_xticklabels(brands, fontsize=8.5)
+    ax1.set_ylabel('Цена (BYN/кг)', fontsize=11)
+    ax1.set_title('Ценовое позиционирование\n(розница / план. опт)', fontsize=12, fontweight='bold')
+    ax1.grid(axis='y', alpha=0.3)
+
+    for bar, price in zip(bars, prices):
+        ax1.annotate(f'{price:.1f}', xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                     xytext=(0, 4), textcoords='offset points', ha='center', fontsize=9, fontweight='bold')
+
+    ax1.axhline(import_data['domestic_avg_kg'], color='#2ecc71', linestyle='--', linewidth=1.5, alpha=0.8,
+                label=f'Ср. отеч.: {import_data["domestic_avg_kg"]:.1f} BYN/кг')
+    ax1.axhline(import_data['import_avg_kg'], color='#e74c3c', linestyle='--', linewidth=1.5, alpha=0.8,
+                label=f'Ср. импорт: {import_data["import_avg_kg"]:.1f} BYN/кг')
+
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor='#3498db', alpha=0.85, label='Коммунарка'),
+        Patch(facecolor='#2ecc71', alpha=0.85, label='Отечественные'),
+        Patch(facecolor='#e74c3c', alpha=0.85, label='Импорт'),
+    ]
+    ax1.legend(handles=legend_elements, fontsize=8, loc='upper left')
+
+    # --- График 2: Структура рынка мармелада 2024 ---
+    ax2 = axes[1]
+    sizes = [import_data['domestic_share'], import_data['import_share']]
+    pie_labels = [
+        f'Отечественное\n{import_data["domestic_share"]:.1f}%\n(~{import_data["domestic_total"]:,.0f} т)',
+        f'Импорт\n{import_data["import_share"]:.1f}%\n(~{import_data["import_volume"]:,.0f} т)',
+    ]
+    ax2.pie(sizes, labels=pie_labels, colors=['#3498db', '#e74c3c'], startangle=90,
+            wedgeprops={'edgecolor': 'white', 'linewidth': 2}, textprops={'fontsize': 10})
+    ax2.set_title(
+        f'Структура рынка мармелада 2024\n(Всего: ~{import_data["total_market"]:,.0f} т)',
+        fontsize=12, fontweight='bold'
+    )
+
+    # --- График 3: Динамика рынка кондитерских изделий 2022–2024 ---
+    ax3 = axes[2]
+    years = [d['year'] for d in import_data['confectionery_data']]
+    domestic_vals = [d['domestic'] / 1000 for d in import_data['confectionery_data']]
+    import_vals = [d['import_vol'] / 1000 for d in import_data['confectionery_data']]
+
+    x = np.arange(len(years))
+    w = 0.35
+    bars1 = ax3.bar(x - w / 2, domestic_vals, w, label='Отечественное', color='#3498db', alpha=0.85)
+    bars2 = ax3.bar(x + w / 2, import_vals, w, label='Импорт', color='#e74c3c', alpha=0.85)
+
+    ax3.set_xlabel('Год', fontsize=11)
+    ax3.set_ylabel('Тыс. тонн', fontsize=11)
+    ax3.set_title('Рынок сахаристых кондитерских изделий\nБеларуси (тыс. т)', fontsize=12, fontweight='bold')
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(years)
+    ax3.legend(fontsize=10)
+    ax3.grid(axis='y', alpha=0.3)
+
+    for bar_group, vals in [(bars1, domestic_vals), (bars2, import_vals)]:
+        for bar, val in zip(bar_group, vals):
+            ax3.annotate(f'{val:.1f}', xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                         xytext=(0, 3), textcoords='offset points', ha='center', fontsize=8.5)
+
+    plt.tight_layout()
+    return fig_to_base64(fig)
+
+
+# ============================================================================
 # МАРШРУТЫ FLASK
 # ============================================================================
 
@@ -1423,6 +1566,13 @@ def get_default_params():
         # Конкурент (мармелад)
         'competitor_capacity': 3924,
         'competitor_output': 2624,
+        # Импортная конкуренция (рынок мармелада Беларуси)
+        'import_volume': 4600,           # Объём импорта мармелада (т, расчётный)
+        'domestic_total': 5200,          # Общий объём отечественного мармелада (т)
+        'total_marmalade_market': 9800,  # Общий рынок мармелада (т)
+        'import_avg_price': 36400,       # Средняя цена импорта (BYN/т = 36.4 BYN/кг)
+        'domestic_avg_price': 16300,     # Средняя цена отечественных (BYN/т = 16.3 BYN/кг)
+        'import_growth_rate': 0.02,      # Темп роста импорта (2%/год — стабилизация после 2024)
         # Коммунарка - линия мармелада
         'capacity_new_line': 1000,
         'price_new': 8000,
@@ -1552,12 +1702,16 @@ def index():
         break_even, wafer_break_even, dynamics, wafer_dynamics, params
     )
     
+    # === АНАЛИЗ ИМПОРТНОЙ КОНКУРЕНЦИИ ===
+    import_data = calculate_import_competition(params)
+    chart_import = plot_import_competition(import_data)
+
     # === ГРАФИКИ МАРМЕЛАДА ===
     chart_comparison = plot_scenario_comparison(df, params)
     chart_mc_base = plot_monte_carlo_histogram(mc_results, 'Базовый')
     chart_mc_opt = plot_monte_carlo_histogram(mc_results, 'Оптимистичный')
     chart_mc_pess = plot_monte_carlo_histogram(mc_results, 'Пессимистичный')
-    chart_market_share = plot_market_share(df)
+    chart_market_share = plot_market_share(df, params)
     chart_mc_comparison = plot_all_monte_carlo(mc_results)
     chart_break_even = plot_break_even(break_even, params)
     chart_tornado = plot_tornado(sensitivity)
@@ -1633,6 +1787,9 @@ def index():
     
     return render_template('index.html',
                           params=params,
+                          # Импортная конкуренция
+                          import_data=import_data,
+                          chart_import=chart_import,
                           # Мармелад
                           df=df_display.to_dict('records'),
                           df_columns=df_display.columns.tolist(),
